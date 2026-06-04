@@ -2,7 +2,7 @@ name: "⚡ Jules // Bolt Performance Profiling"
 
 on:
   schedule:
-    - cron: '30 20 * * *' # Nightly at 3:30 PM CDT
+    - cron: '0 21 * * *' # Nightly at 4:00 PM CDT
   workflow_dispatch:
 
 jobs:
