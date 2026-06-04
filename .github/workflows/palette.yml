@@ -1,0 +1,15 @@
+name: "🎨 Jules // Palette UX Audit"
+
+on:
+  schedule:
+    - cron: '30 20 * * 0' # Weekly on Sunday at 3:30 PM CDT
+  workflow_dispatch:
+
+jobs:
+  summon-jules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Summoning Palette Agent"
+        run: |
+          echo "Summoning Jules (Palette) for weekly UX audit..."
+          echo "Focus: Aesthetic consistency, Monospace hierarchy, and UI polish."

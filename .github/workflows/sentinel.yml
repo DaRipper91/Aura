@@ -1,0 +1,15 @@
+name: "🛡️ Jules // Sentinel Security Sweep"
+
+on:
+  schedule:
+    - cron: '30 20 * * *' # Nightly at 3:30 PM CDT
+  workflow_dispatch:
+
+jobs:
+  summon-jules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Summoning Sentinel Agent"
+        run: |
+          echo "Summoning Jules (Sentinel) for nightly security sweep..."
+          echo "Focus: Dependency safety, Secret scanning, and API integrity."

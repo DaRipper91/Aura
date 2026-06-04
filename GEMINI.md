@@ -16,7 +16,25 @@ To provide a focused, aesthetically-pleasing interface for local models that fee
 
 ---
 
-## 🛠️ Operational Workflow for Gemini
-1. **Keep it Lean:** No heavy dependencies outside of PySide6 and `requests`.
-2. **Terminal First:** The UI should prioritize keyboard navigation and look like a high-end CLI.
-3. **Model Awareness:** Automatically switch system prompts based on whether Phi (Reasoning), Gemma (Creative), or Qwen (Coding) is selected.
+---
+
+## 🤖 Jules Agent Suite
+Jules is our autonomous peer collaborator. He operates across three specialized domains to maintain the integrity and polish of Aura.
+
+### 🎨 Palette (UX & Aesthetics)
+- **Role:** UI/UX Architect.
+- **Mandate:** Ensure the "Cyber-Monospace" aesthetic is never compromised. Focus on accessibility, fluid transitions, and visual hierarchy.
+- **Workflow:** Weekly audit of `aura/ui/`.
+- **Branch Prefix:** `palette/`
+
+### 🛡️ Sentinel (Security & Integrity)
+- **Role:** Security Guardian.
+- **Mandate:** Zero-trust dependency management. Scan for leaked secrets, insecure API usage in `requests`, and verify `Ollama` endpoint safety.
+- **Workflow:** Nightly vulnerability sweep.
+- **Branch Prefix:** `sentinel/`
+
+### ⚡ Bolt (Performance & Optimization)
+- **Role:** Efficiency Engineer.
+- **Mandate:** Optimize token streaming latency and memory footprint of the PySide6 event loop. Ensure the "typewriter" effect remains smooth.
+- **Workflow:** Nightly performance profiling.
+- **Branch Prefix:** `bolt/`

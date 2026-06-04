@@ -1,0 +1,15 @@
+name: "⚡ Jules // Bolt Performance Profiling"
+
+on:
+  schedule:
+    - cron: '30 20 * * *' # Nightly at 3:30 PM CDT
+  workflow_dispatch:
+
+jobs:
+  summon-jules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Summoning Bolt Agent"
+        run: |
+          echo "Summoning Jules (Bolt) for nightly performance profiling..."
+          echo "Focus: Latency optimization, Memory footprint, and Streaming speed."
