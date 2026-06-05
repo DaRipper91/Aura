@@ -8,8 +8,8 @@ class AuraBridge {
 
     init {
         val py = Python.getInstance()
-        // Loads aura/core/engine.py (Full Python Build)
-        val engineModule = py.getModule("aura.core.engine")
+        // Loads engine.py from aura_core/ (Mapped as sourceDir)
+        val engineModule = py.getModule("engine")
         pythonEngine = engineModule.callAttr("OllamaClient")
     }
 

@@ -5,8 +5,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QIcon, QFontDatabase, QFont
-from aura.core.engine import OllamaClient
-from aura.core.mandates import aura_component
+from aura_core.engine import OllamaClient
+from aura_core.mandates import aura_component
 from markdown_it import MarkdownIt
 import os
 import ctypes

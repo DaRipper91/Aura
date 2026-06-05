@@ -48,8 +48,8 @@ chaquopy {
     }
     sourceSets {
         main {
-            // Map the Python source path to the project root for standard package resolution
-            srcDirs = ["../../"] 
+            // Map the Python source path to the shared aura_core package
+            srcDirs = ["../../aura_core"] 
         }
     }
 
