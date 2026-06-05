@@ -33,6 +33,8 @@ import coil.compose.AsyncImage
 class MainActivity : FragmentActivity() {
     private lateinit var auraBridge: AuraBridge
     private lateinit var biometricHelper: BiometricHelper
+    private lateinit var modelManager: ModelManager
+    private lateinit var shellBridge: ShellBridge
     private var speechCallback: ((String) -> Unit)? = null
 
     private val speechRecognizerLauncher = registerForActivityResult(
@@ -55,8 +57,10 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        auraBridge = AuraBridge()
+        auraBridge = AuraBridge(this)
         biometricHelper = BiometricHelper(this)
+        modelManager = ModelManager(this)
+        shellBridge = ShellBridge()
 
         // 🔐 SECURE: Require biometric unlock on launch
         biometricHelper.authenticate {
@@ -71,7 +75,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             AuraTheme {
-                ChatScreen(auraBridge, sharedText, ::launchSpeechRecognition)
+                ChatScreen(auraBridge, modelManager, shellBridge, sharedText, ::launchSpeechRecognition)
             }
         }
     }
@@ -119,10 +123,18 @@ fun AuraTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(bridge: AuraBridge, initialPrompt: String? = null, onDictate: (((String) -> Unit) -> Unit)? = null) {
+fun ChatScreen(
+    bridge: AuraBridge, 
+    modelManager: ModelManager,
+    shellBridge: ShellBridge,
+    initialPrompt: String? = null, 
+    onDictate: (((String) -> Unit) -> Unit)? = null
+) {
     var inputText by remember { mutableStateOf(initialPrompt ?: "") }
     var messages by remember { mutableStateOf(listOf<String>()) }
-    var isRemote by remember { mutableStateOf(false) }
+    var engineMode by remember { mutableStateOf("REMOTE") } // REMOTE, STANDALONE, ADVANCED
+    var isDownloading by remember { mutableStateOf(false) }
+    
     val view = LocalView.current
     val context = LocalContext.current
 
@@ -130,25 +142,57 @@ fun ChatScreen(bridge: AuraBridge, initialPrompt: String? = null, onDictate: (((
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            .statusBarsPadding() // Ensure text doesn't hide under the camera
+            .navigationBarsPadding() // Space for gesture bar
             .imePadding() 
     ) {
-        // 🌌 HEADER: Status and Remote Toggle
+        // 🌌 HEADER: Mode Switcher
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("AURA // PIXEL_10_PRO", color = Color(0xFFD4AF37), style = MaterialTheme.typography.labelSmall)
-            Text(
-                text = if (isRemote) "SYNC: REMOTE" else "SYNC: LOCAL",
-                color = if (isRemote) Color(0xFF8833FF) else Color.Gray,
-                modifier = Modifier.clickable { 
-                    isRemote = !isRemote
-                    bridge.setOrchestratorUrl(if (isRemote) "http://192.168.1.100:11434" else "http://localhost:11434")
-                },
-                style = MaterialTheme.typography.labelSmall
-            )
+            Text("AURA // ${engineMode}", color = Color(0xFFD4AF37), style = MaterialTheme.typography.labelSmall)
+            Row {
+                Text(
+                    text = "SW", 
+                    color = if (engineMode == "STANDALONE") Color(0xFF8833FF) else Color.Gray,
+                    modifier = Modifier.clickable { 
+                        if (!modelManager.isModelDownloaded("QWEN_1.5B")) {
+                            isDownloading = true
+                            modelManager.downloadModel("QWEN_1.5B") {
+                                isDownloading = false
+                                bridge.setLocalMode(true, modelManager.getModelFile("QWEN_1.5B").absolutePath)
+                                engineMode = "STANDALONE"
+                            }
+                        } else {
+                            engineMode = "STANDALONE"
+                            bridge.setLocalMode(true, modelManager.getModelFile("QWEN_1.5B").absolutePath)
+                        }
+                    }.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "RE", 
+                    color = if (engineMode == "REMOTE") Color(0xFF8833FF) else Color.Gray,
+                    modifier = Modifier.clickable { 
+                        engineMode = "REMOTE"
+                        bridge.setLocalMode(false)
+                    }.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "ADV", 
+                    color = if (engineMode == "ADVANCED") Color(0xFFD4AF37) else Color.Gray,
+                    modifier = Modifier.clickable { 
+                        engineMode = "ADVANCED"
+                    }.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+
+        if (isDownloading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFFD4AF37))
         }
 
         LazyColumn(
@@ -162,7 +206,7 @@ fun ChatScreen(bridge: AuraBridge, initialPrompt: String? = null, onDictate: (((
                         color = if (msg.startsWith("USER:")) Color(0xFFD4AF37) else Color(0xFFB0B0B0), 
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
-                    // 🖼️ COIL: Simple image detection (mocked logic for overhaul)
+                    // 🖼️ COIL: Simple image detection
                     if (msg.contains("http") && (msg.contains(".png") || msg.contains(".jpg"))) {
                         AsyncImage(
                             model = msg.substringAfter("http").substringBefore(" ").let { "http$it" },
@@ -181,7 +225,7 @@ fun ChatScreen(bridge: AuraBridge, initialPrompt: String? = null, onDictate: (((
                 value = inputText,
                 onValueChange = { inputText = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Aura Command...", color = Color.Gray) },
+                placeholder = { Text(if (engineMode == "ADVANCED") "Root Command..." else "Aura Command...", color = Color.Gray) },
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     focusedTextColor = Color.White,
@@ -200,21 +244,29 @@ fun ChatScreen(bridge: AuraBridge, initialPrompt: String? = null, onDictate: (((
                 onClick = {
                     val prompt = inputText
                     if (prompt.isNotBlank()) {
-                        // 🔋 PERSISTENCE: Start background service during reasoning
-                        val serviceIntent = Intent(context, AuraService::class.java)
-                        context.startForegroundService(serviceIntent)
-
-                        // ⚡ HAPTIC: Tactical pulse on send
                         view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        
                         messages = messages + "USER: $prompt"
                         messages = messages + "AURA: ..." 
                         inputText = ""
-                        
-                        bridge.sendPrompt(prompt) { currentStream ->
-                            // ⚡ HAPTIC: Micro-pulse during typewriter effect
-                            view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
-                            messages = messages.dropLast(1) + "AURA: $currentStream"
+
+                        if (engineMode == "ADVANCED") {
+                            shellBridge.execute(prompt, object : ShellBridge.ShellCallback {
+                                override fun onOutput(line: String) {
+                                    messages = messages.dropLast(1) + "AURA: (SHELL) $line"
+                                }
+                                override fun onComplete(exitCode: Int) {
+                                    messages = messages.dropLast(1) + "AURA: Execution Finished [Code: $exitCode]"
+                                }
+                            })
+                        } else {
+                            // 🔋 PERSISTENCE: Start background service during reasoning
+                            val serviceIntent = Intent(context, AuraService::class.java)
+                            context.startForegroundService(serviceIntent)
+                            
+                            bridge.sendPrompt(prompt) { currentStream ->
+                                view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
+                                messages = messages.dropLast(1) + "AURA: $currentStream"
+                            }
                         }
                     }
                 },

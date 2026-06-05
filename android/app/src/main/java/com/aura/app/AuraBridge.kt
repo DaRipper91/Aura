@@ -5,11 +5,14 @@ import android.os.Looper
 import com.chaquo.python.Python
 import com.chaquo.python.PyObject
 
-class AuraBridge {
+class AuraBridge(private val context: android.content.Context) {
     private var pythonEngine: PyObject? = null
+    private var localEngine: LocalInferenceEngine? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var useLocalInference = false
 
     init {
+        localEngine = LocalInferenceEngine(context)
         try {
             val py = Python.getInstance()
             // Loads aura_core/engine.py (Full Python Build)
@@ -28,9 +31,30 @@ class AuraBridge {
     }
 
     /**
-     * Pipes the prompt to Python and returns streamed chunks via callback.
+     * Toggles between Remote Python Engine and Standalone Local Engine.
+     */
+    fun setLocalMode(enabled: Boolean, modelPath: String? = null, onReady: (Boolean) -> Unit = {}) {
+        useLocalInference = enabled
+        if (enabled && modelPath != null) {
+            localEngine?.initialize(modelPath) { success ->
+                mainHandler.post { onReady(success) }
+            }
+        } else {
+            onReady(true)
+        }
+    }
+
+    /**
+     * Pipes the prompt to the active engine (Python/Remote or Standalone/Local).
      */
     fun sendPrompt(prompt: String, model: String = "qwen2.5:7b", callback: (String) -> Unit) {
+        if (useLocalInference) {
+            localEngine?.generateResponse(prompt) { result ->
+                mainHandler.post { callback(result) }
+            }
+            return
+        }
+
         Thread {
             try {
                 // Chaquopy translates Python generators to Java Iterators
