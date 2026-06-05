@@ -84,6 +84,11 @@ class AuraWindow(QMainWindow):
         self.setWindowTitle("Aura // Local AI")
         self.resize(1200, 800)
         
+        # Set Window Icon
+        icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
         # Initialize Engine
         self.engine = OllamaClient()
         self.models = [m['name'] for m in self.engine.get_available_models()]
