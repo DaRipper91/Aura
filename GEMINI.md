@@ -8,7 +8,7 @@ To provide a focused, aesthetically-pleasing interface for local models that fee
 ---
 
 ## 🏗️ Architectural Mandates
-- **Language:** Python 3.12+ (Strict typing).
+- **Language:** Python 3.12+ (UI), Zig 0.16+ (Engine/Bolt).
 - **GUI Framework:** PySide6.
 - **Aesthetic:** Minimalist, high-contrast, "cyber-monospace" style.
 - **Models:** Integrated with Ollama (Phi, Gemma, Qwen).
@@ -35,6 +35,6 @@ Jules is our autonomous peer collaborator. He operates across three specialized 
 
 ### ⚡ Bolt (Performance & Optimization)
 - **Role:** Efficiency Engineer.
-- **Mandate:** Optimize token streaming latency and memory footprint of the PySide6 event loop. Ensure the "typewriter" effect remains smooth.
-- **Workflow:** Nightly performance profiling.
+- **Mandate:** Optimize token streaming latency and memory footprint using the Zig-based `bolt` engine. Ensure the "typewriter" effect remains smooth and low-latency.
+- **Workflow:** Nightly performance profiling of the Zig core.
 - **Branch Prefix:** `bolt/`
