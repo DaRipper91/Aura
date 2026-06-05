@@ -30,11 +30,11 @@ class AuraBridge {
     /**
      * Pipes the prompt to Python and returns streamed chunks via callback.
      */
-    fun sendPrompt(prompt: String, callback: (String) -> Unit) {
+    fun sendPrompt(prompt: String, model: String = "qwen2.5:7b", callback: (String) -> Unit) {
         Thread {
             try {
                 // Chaquopy translates Python generators to Java Iterators
-                val generator = pythonEngine?.callAttr("stream_chat", prompt)
+                val generator = pythonEngine?.callAttr("stream_chat", model, prompt)
                 val iterator = generator?.callAttr("__iter__")
                 
                 var fullResponse = ""

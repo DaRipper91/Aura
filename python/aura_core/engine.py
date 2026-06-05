@@ -67,18 +67,17 @@ class OllamaClient:
             pass
         return []
 
-    def stream_chat(self, prompt: str, model: Optional[str] = None, options: Optional[dict] = None) -> Generator[str, None, None]:
-        target_model = model or self.current_model
+    def stream_chat(self, model: str, prompt: str, options: Optional[dict] = None) -> Generator[str, None, None]:
         url = f"{self.base_url}/api/generate"
-        system_prompt = self.get_system_prompt(target_model)
-        
+        system_prompt = self.get_system_prompt(model)
+
         # Add Tool Instruction to System Prompt for Qwen
-        if "qwen" in target_model.lower():
+        if "qwen" in model.lower():
             system_prompt += "\n\n[TOOL_USE] To write a file, output: WRITE_FILE: <path>\nCONTENT:\n<content>\nEOF"
 
         # Update History
         self.history.append({"role": "user", "content": prompt})
-        
+
         payload = {
             "model": model,
             "system": system_prompt,
@@ -86,6 +85,7 @@ class OllamaClient:
             "stream": True,
             "context": self.last_context # Multi-turn support
         }
+
         if options:
             payload["options"] = options
 
