@@ -11,6 +11,7 @@ from markdown_it import MarkdownIt
 import os
 import ctypes
 import json
+import html
 from typing import Optional
 
 class ChatWorker(QThread):
@@ -348,7 +349,8 @@ class AuraWindow(QMainWindow):
             self.engine.project_root = new_dir
             self.dir_label.setText(f"DIR: {os.path.basename(new_dir)}")
             self.dir_label.setToolTip(new_dir)
-            self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Workspace updated: {new_dir}</i></p>")
+            safe_new_dir = html.escape(new_dir)
+            self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Workspace updated: {safe_new_dir}</i></p>")
 
     def process_input(self):
         text = self.input_field.text().strip()
@@ -374,7 +376,8 @@ class AuraWindow(QMainWindow):
                     break
             
             if not found:
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Unknown model: {cmd}</i></p>")
+                safe_cmd = html.escape(cmd)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Unknown model: {safe_cmd}</i></p>")
             
             self.input_field.clear()
             return
@@ -420,14 +423,16 @@ class AuraWindow(QMainWindow):
             
             # Security: Prevent path traversal
             if os.path.isabs(path) or ".." in path:
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path traversal detected: {path}</i></p>")
+                safe_path = html.escape(path)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path traversal detected: {safe_path}</i></p>")
                 return
 
             full_path = os.path.normpath(os.path.join(self.engine.project_root, path))
             
             # Security: Ensure path is within project root
             if not full_path.startswith(os.path.normpath(self.engine.project_root)):
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path outside workspace: {path}</i></p>")
+                safe_path = html.escape(path)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path outside workspace: {safe_path}</i></p>")
                 return
 
             from PySide6.QtWidgets import QMessageBox
@@ -439,11 +444,13 @@ class AuraWindow(QMainWindow):
                 os.makedirs(os.path.dirname(full_path), exist_ok=True)
                 with open(full_path, "w") as f:
                     f.write(file_content)
-                self.output_area.append(f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // FILE_WRITTEN: {path}</i></p>")
+                safe_path = html.escape(path)
+                self.output_area.append(f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // FILE_WRITTEN: {safe_path}</i></p>")
             else:
                 self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // FILE_WRITE_CANCELLED</i></p>")
         except Exception as e:
-            self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_ERROR: {str(e)}</i></p>")
+            safe_e = html.escape(str(e))
+            self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_ERROR: {safe_e}</i></p>")
 
     def render_messages(self):
         self.output_area.clear()
@@ -455,12 +462,14 @@ class AuraWindow(QMainWindow):
             
         for msg in display_messages:
             if msg["role"] == "user":
-                html_content += f"<p><span style='color: #6633FF;'><b>&gt;</b></span> <span style='color: #FFFFFF;'>{msg['content']}</span></p>"
+                safe_content = html.escape(msg['content'])
+                html_content += f"<p><span style='color: #6633FF;'><b>&gt;</b></span> <span style='color: #FFFFFF;'>{safe_content}</span></p>"
             else:
                 # Use raw text during streaming to avoid flickering, render markdown when done
                 is_pending = (self.pending_message and msg == self.pending_message)
                 if is_pending:
-                    content_html = f"<pre style='white-space: pre-wrap; font-family: inherit;'>{msg['content']}</pre>"
+                    safe_content = html.escape(msg['content'])
+                    content_html = f"<pre style='white-space: pre-wrap; font-family: inherit;'>{safe_content}</pre>"
                 else:
                     content_html = self.md.render(msg["content"])
                 
