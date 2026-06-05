@@ -2,11 +2,12 @@ package com.aura.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import android.view.HapticFeedbackConstants
-import android.view.View
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,9 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import android.speech.RecognizerIntent
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import coil.compose.AsyncImage
 
 class MainActivity : FragmentActivity() {
     private lateinit var auraBridge: AuraBridge
@@ -70,11 +74,6 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-
 @Composable
 fun AuraTheme(content: @Composable () -> Unit) {
     val jetBrainsMono = FontFamily(
@@ -97,8 +96,6 @@ fun AuraTheme(content: @Composable () -> Unit) {
         content = content
     )
 }
-
-import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -198,11 +195,6 @@ fun ChatScreen(bridge: AuraBridge, initialPrompt: String? = null, onDictate: (((
                             // ⚡ HAPTIC: Micro-pulse during typewriter effect
                             view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
                             messages = messages.dropLast(1) + "AURA: $currentStream"
-                            
-                            if (!currentStream.contains("...")) {
-                                // Reasoning finished, service can be stopped or downgraded
-                                // context.stopService(serviceIntent)
-                            }
                         }
                     }
                 },
