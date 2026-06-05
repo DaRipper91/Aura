@@ -1,3 +1,8 @@
+repositories {
+    mavenCentral()
+    maven { url 'https://maven.rikka.app/repository/maven-public/' }
+}
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
