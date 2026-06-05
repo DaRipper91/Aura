@@ -18,9 +18,18 @@ class AuraEngine:
         self.project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
         self.current_model = "qwen2.5:7b"
+        self.last_context = None
 
-    def set_model(self, model_name: str):
-        self.current_model = model_name
+    def set_base_url(self, url: str):
+        """Update the target orchestrator (e.g. for Remote Bridge)."""
+        self.base_url = url
+
+    def clear_history(self):
+        self.history = []
+        self.last_context = None
+
+    def get_history(self) -> List[Dict[str, str]]:
+        return self.history
 
     def get_available_models(self) -> List[Dict]:
         try:

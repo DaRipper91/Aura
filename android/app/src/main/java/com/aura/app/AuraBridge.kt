@@ -7,16 +7,16 @@ class AuraBridge {
     private var pythonEngine: PyObject? = null
 
     init {
-        // Initialize Python environment (handled by Chaquopy in Application class context)
-        if (!Python.isStarted()) {
-            // Start Python - usually done in a custom Application class, placed here for brevity
-            // Python.start(AndroidPlatform(context)) 
-        }
-        
         val py = Python.getInstance()
-        // Loads core/engine.py from our shared directory
         val engineModule = py.getModule("engine")
         pythonEngine = engineModule.callAttr("AuraEngine")
+    }
+
+    /**
+     * Updates the base URL for the Python engine (Remote Bridge).
+     */
+    fun setOrchestratorUrl(url: String) {
+        pythonEngine?.callAttr("set_base_url", url)
     }
 
     /**
