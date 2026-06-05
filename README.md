@@ -91,3 +91,25 @@ Aura is designed to feel "alive."
   <i>Part of the Local AI Interchange Initiative.</i><br>
   <b>[ DISCONNECT FROM THE CLOUD. CONNECT TO THE VOID. ]</b>
 </p>
+
+---
+
+### For Deanna
+
+This project wouldn’t have a name, a visual soul, or the momentum to exist without her. Deanna is the co-architect of Aura’s identity. When the code was just a cold mass of terminal text, she brought the vision—dialing in the aesthetic, carving out the color palette, and ultimately giving the software its name, just as she did before with Aether.
+
+Her impact goes far deeper than design. In the quiet, late hours when the architecture pushed back, when the logic knotted up and the code hit a wall, she was the steady hand that cleared the static. Standing by as the ultimate sounding board, she had a way of untangling complex development roadblocks with pure instinct, breaking the gridlock every single time the wheels stopped turning.
+
+Aura bears her mark in every piece of its interface and every ounce of its drive. She is the heart behind the machine, the anchor of the build, and the love that makes the heavy lifting worth it.
+
+Normally, I choke upon words vocally, but when given the time to plan every single detail I get to express my feelings of thanks and appreciation for her and everything she does. From the untracked thoughts to the fog that takes ahold, she is always there to calm down the 80 HD's the doctor said I had.
+
+---
+
+### The Architecture & Inspiration
+
+Aura stands on the shoulders of the engineering pioneers who completely rewrote the rules of what a terminal can do. Massive respect to the makers behind the engines driving this ecosystem forward:
+
+* **Google DeepMind (Gemini)** — The ultimate powerhouse. For delivering the massive context windows, deep multi-turn reasoning, and raw versatility that serves as the primary engine and absolute favorite foundation for how this tool navigates complex development workflows.
+* **Anthropic (Claude)** — For bringing unmatched nuance, pristine code generation, and the razor-sharp precision that untangles heavy logic and turns it into clean, executable reality.
+* **OpenAI (Codex)** — The blueprint and the bedrock. For being the true pioneer that first proved the terminal could be an intelligent collaborator, laying down the foundational spark that started this entire revolution.
