@@ -5,8 +5,8 @@ on:
     branches: [ "main" ]
     paths:
       - 'android/**'
-      - 'core/**'
-      - 'aura/core/**'
+      - 'aura_core/**'
+      - 'aura/ui/**'
       - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
