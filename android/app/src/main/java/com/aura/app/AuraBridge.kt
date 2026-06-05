@@ -10,10 +10,14 @@ class AuraBridge {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
-        val py = Python.getInstance()
-        // Loads aura_core/engine.py (Full Python Build)
-        val engineModule = py.getModule("aura_core.engine")
-        pythonEngine = engineModule.callAttr("OllamaClient")
+        try {
+            val py = Python.getInstance()
+            // Loads aura_core/engine.py (Full Python Build)
+            val engineModule = py.getModule("aura_core.engine")
+            pythonEngine = engineModule.callAttr("OllamaClient")
+        } catch (e: Exception) {
+            android.util.Log.e("AuraBridge", "Python Engine Initialization Failed: ${e.message}")
+        }
     }
 
     /**

@@ -48,8 +48,8 @@ chaquopy {
     }
     sourceSets {
         main {
-            // Map the Python source path to the project root to maintain package structure
-            srcDirs = ["../../"] 
+            // Map the Python source path to the isolated python directory
+            srcDirs = ["../../python"] 
         }
     }
 
@@ -64,7 +64,7 @@ dependencies {
     implementation 'androidx.compose.material3:material3'
     
     // 🛠️ Pixel 10 Pro Extensions
-    implementation 'androidx.biometric:biometric:1.2.0-alpha05'
+    implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'io.coil-kt:coil-compose:2.5.0'
     implementation 'androidx.lifecycle:lifecycle-service:2.6.1'
 }
