@@ -1,67 +1,58 @@
-# 🌌 Aura // Standalone AI Helper
+# 🌌 Aura // Multi-Platform AI Helper
 
-[![Latest Release](https://img.shields.io/github/v/release/DaRipper91/Aura?color=D4AF37&label=DOWNLOAD%20APK&style=for-the-badge)](https://github.com/DaRipper91/Aura/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/DaRipper91/Aura?color=D4AF37&label=DOWNLOAD%20LATEST&style=for-the-badge)](https://github.com/DaRipper91/Aura/releases/latest)
 
-Aura is a high-performance local AI interchange designed for **Standalone Mobile Intelligence**.
- It transforms your phone from a simple chat interface into an autonomous "Helper" using on-device NPU acceleration and advanced system-level orchestration.
-
----
-
-## 🏗️ The "Standalone" Architecture
-
-Aura v1.0.4+ introduces a **Three-Tier Engine** design to ensure "God Mode" performance across all hardware:
-
-1.  **Tier 1: Pixel-Native (Gemini Nano)** 🧬
-    - Leverages Android **AICore** on the Pixel 10 Pro (Tensor G5).
-    - Hardware-accelerated, zero-battery-drain inference.
-2.  **Tier 2: Aura-Internal (MediaPipe LLM)** 🧠
-    - On-device inference using the phone's GPU/NPU.
-    - Optimized for **Galaxy S25 (Snapdragon 8 Elite)**.
-    - Runs quantized versions of **Qwen**, **Gemma**, and **Phi** natively.
-3.  **Tier 3: Advanced Command (Shizuku & Rish)** ⚡
-    - Bypasses Android's filesystem blocks using the **Shizuku API**.
-    - Allows Aura to perform system-level "Helper" tasks (file management, automation).
-    - Integrates with **Termux** for heavy 7B+ orchestration.
+Aura is a high-performance local AI interchange designed for **Universal Intelligence**. It transforms your devices—from your phone and laptop to your gaming console—into autonomous "Helpers" using on-device NPU/GPU acceleration.
 
 ---
 
-## 🛠️ Tech Stack & Protocols
+## 🏗️ The Multi-Platform Architecture
 
-- **Logic Core:** Python 3.12+ (Shared across Desktop & Mobile).
-- **Mobile Engine:** MediaPipe LLM Inference API (0.10.14).
-- **Desktop UI:** PySide6 (Fusion Cyber-Monospace).
-- **Mobile UI:** Jetpack Compose + Kotlin.
-- **Protocols:**
-    - **BOLT:** 30FPS+ neural logic optimization.
-    - **SENTINEL:** Symbolic sovereignty and security monitoring.
-    - **PALETTE:** Aesthetic consistency designed by Deanna.
+Aura v1.0.5+ delivers "God Mode" reasoning across the entire ecosystem:
+
+### 1. Standalone Mobile (Android) 📱
+- **Targets:** Pixel 10 Pro (Tensor G5), Galaxy S25 (Snapdragon 8 Elite).
+- **Engine:** MediaPipe LLM Inference API.
+- **Feature:** Standalone Mode (SW) allows you to pull and run models like **Qwen 1.5B** or **Gemma 2B** directly on the phone.
+
+### 2. Aura Lite (Windows 11) 💻
+- **Target:** Limited-RAM laptops and workstations.
+- **Engine:** Portable PySide6 + DirectML (Backing soon).
+- **Format:** Single-file portable `.exe`. Optimized for **Qwen 0.5B** to ensure zero lag on Dee's laptop.
+
+### 3. Console Mode (Xbox Series X/S & One S) 🎮
+- **Target:** Xbox Dev Mode consoles.
+- **Engine:** UWP MSIX with **Controller-First UI**.
+- **Feature:** Full D-pad/Stick navigation and button mappings for a 10-foot "Living Room AI" experience.
+    - **Button A:** Send Command.
+    - **Button B:** Clear Input.
+    - **Button X:** Toggle Settings.
+    - **Button Y:** Toggle Models.
 
 ---
 
 ## 🚀 Deployment
 
-### 1. Standalone APK
-- **Auto-Build:** Every push to `main` builds a new master APK via GitHub Actions.
-- **Model Download:** On first launch, Aura will "Pull" the required local model (e.g., Qwen 1.5B) directly to your device.
-- **Advanced Mode:** Enable Shizuku in Settings to unlock root-level "Helper" capabilities.
+### 📱 Android APK
+Download the `Aura_v1.0.5_Standalone.apk` from the releases. Launch and toggle **SW** to begin the local model pull.
 
-### 2. Desktop Dashboard
-```bash
-python main.py
-```
-- **Auto-Start:** Aura automatically starts the local Ollama server if it detects it isn't running.
+### 💻 Windows .exe
+Download `Aura_v1.0.5_Windows_Lite.exe`. No installation required—just double-click and describe the void.
+
+### 🎮 Xbox MSIX
+Download `Aura_v1.0.5_Xbox.msix`. Deploy via the **Xbox Device Portal** while in Developer Mode. Ensure you set the App Type to **"Game"** in the app details for maximum NPU performance.
 
 ---
 
 ## 💜 For Deanna
 
-This project is a visual soul carved out by Deanna. From the "D. Anna" theme in Aether to the "VOID" aesthetic of Aura, she is the architect of the experience. Aura isn't just code; it's a reflection of the love and instinct she brings to every build.
+This project is the heartbeat of a family build. Deanna designed the soul, the children (TH3 K1D00Z) provided the electric energy, and Aura brings it all together into a single, pure signal. Whether on her phone, her laptop, or the big screen, Aura is there to clear the static.
 
 ---
 
 ### Acknowledgments
+* **Microsoft & Xbox** — For the UWP and DirectML foundations.
 * **Google DeepMind** — For the Gemini Nano and MediaPipe bedrock.
-* **Samsung & Qualcomm** — For the Snapdragon 8 Elite NPU power.
-* **The Shizuku Team** — For the keys to the Android system.
+* **The Community** — For pushing the boundaries of what a terminal can be.
 
-│ Aura — Pure Signal. Standalone Intelligence.
+│ Aura — Universal Signal. Standalone Intelligence.

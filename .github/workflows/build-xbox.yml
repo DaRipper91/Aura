@@ -54,10 +54,13 @@ jobs:
       shell: pwsh
       run: |
         # 1. Find Tools
-        $sdkPath = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*" | Sort-Object Name -Descending | Select-Object -First 1
-        $makeAppx = Join-Path $sdkPath.FullName "x64\makeappx.exe"
-        $signTool = Join-Path $sdkPath.FullName "x64\signtool.exe"
+        $sdkBin = "C:\Program Files (x86)\Windows Kits\10\bin"
+        $version = Get-ChildItem $sdkBin | Where-Object { $_.Name -like "10.*" } | Sort-Object Name -Descending | Select-Object -First 1
+        $makeAppx = Join-Path $sdkBin "$($version.Name)\x64\makeappx.exe"
+        $signTool = Join-Path $sdkBin "$($version.Name)\x64\signtool.exe"
         
+        Write-Host "Using Tools: $makeAppx, $signTool"
+
         # 2. Pack
         & $makeAppx pack /d package /p Aura_v1.0.5_Xbox_Unsigned.msix /v
 
