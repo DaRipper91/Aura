@@ -1,0 +1,3 @@
+## 2024-06-05 - O(N*M) Markdown Rendering Bottleneck in Stream UI
+**Learning:** During LLM streaming (`handle_chunk`), `render_messages()` recalculates the full HTML for *all* past messages on every single token chunk received. Because `markdown_it` parsing is computationally heavy, this creates an O(N*M) rendering bottleneck (where N=past messages, M=tokens in current stream) that hangs the UI thread as the conversation grows.
+**Action:** Always cache expensive string operations (like Markdown parsing) at the message object level in chat UIs to ensure streaming performance remains O(1) with respect to past messages.

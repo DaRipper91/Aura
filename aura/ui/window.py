@@ -462,7 +462,15 @@ class AuraWindow(QMainWindow):
                 if is_pending:
                     content_html = f"<pre style='white-space: pre-wrap; font-family: inherit;'>{msg['content']}</pre>"
                 else:
-                    content_html = self.md.render(msg["content"])
+                    # ⚡ BOLT OPTIMIZATION: Cache markdown rendering
+                    # Parsing markdown is computationally expensive. During streaming, this function is called
+                    # for every token chunk. By caching the rendered HTML on the message object, we convert
+                    # an O(N*M) rendering bottleneck into O(1) for past messages.
+                    # Expected impact: Eliminates UI freezing during long conversations.
+                    content_html = msg.get("_rendered_html")
+                    if content_html is None:
+                        content_html = self.md.render(msg["content"])
+                        msg["_rendered_html"] = content_html
                 
                 html_content += f"<div style='color: #D4AF37;'><b>{msg['model'].upper()}</b></div>"
                 html_content += f"<div style='color: #B0B0B0;'>{content_html}</div><br>"
