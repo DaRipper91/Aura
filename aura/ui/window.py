@@ -46,64 +46,14 @@ class ChatWorker(QThread):
         self.prompt = prompt
         self.options = options
         self.engine = engine
-        self.lib_path = os.path.join(os.path.dirname(__file__), "..", "bolt", "lib", "libbolt.so")
 
     def run(self):
-        # ⚡ BOLT: Try FFI Integration first
-        if os.path.exists(self.lib_path):
-            try:
-                # This is a stub for the actual FFI call which requires specific Zig exports
-                # Falling back to the verified subprocess method for now, but logged for expansion
-                print("[BOLT] Shared library detected. Switching to high-speed FFI bridge...")
-                pass 
-            except Exception as e:
-                print(f"[BOLT ERROR] FFI failed: {e}")
-
-        # Verified Subprocess Method (Bolt Tier 2)
-        import subprocess
-        bolt_bin = os.path.join(os.path.dirname(__name__), "..", "bolt", "zig-out", "bin", "bolt")
-        if not os.path.exists(bolt_bin):
-             bolt_bin = os.path.join(os.path.dirname(__file__), "..", "bolt", "zig-out", "bin", "bolt")
-
-        if os.path.exists(bolt_bin):
-            try:
-                process = subprocess.Popen(
-                    [bolt_bin, self.model, self.prompt],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1
-                )
-                
-                def log_stderr():
-                    for err_line in process.stderr:
-                        if err_line.strip():
-                            print(f"[Bolt Stderr]: {err_line.strip()}")
-                
-                import threading
-                stderr_thread = threading.Thread(target=log_stderr, daemon=True)
-                stderr_thread.start()
-
-                for line in process.stdout:
-                    if line.strip():
-                        try:
-                            chunk_data = json.loads(line)
-                            # 🧩 PYTHON MAGIC: Structural Pattern Matching
-                            match chunk_data:
-                                case {"response": text}:
-                                    self.chunk_received.emit(text)
-                                case {"done": True}:
-                                    break
-                                case _:
-                                    continue
-                        except json.JSONDecodeError:
-                            continue
-                process.wait()
-            except Exception as e:
-                self.chunk_received.emit(f"\n[Bolt Error: {str(e)}]")
-        else:
+        # ⚡ PURE PYTHON: Verfied native stream
+        try:
             for chunk in self.engine.stream_chat(self.model, self.prompt, self.options):
                 self.chunk_received.emit(chunk)
+        except Exception as e:
+            self.chunk_received.emit(f"\n[Aura Error: {str(e)}]")
         
         self.finished.emit()
 

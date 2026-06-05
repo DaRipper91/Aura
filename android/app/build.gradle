@@ -48,10 +48,11 @@ chaquopy {
     }
     sourceSets {
         main {
-            // Map the Python source path directly to our shared core directory
-            srcDirs = ["../../core"] 
+            // Map the Python source path to the project root for standard package resolution
+            srcDirs = ["../../"] 
         }
     }
+
 }
 
 dependencies {
