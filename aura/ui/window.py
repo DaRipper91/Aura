@@ -475,10 +475,12 @@ class AuraWindow(QMainWindow):
             self.models_list.addItem(f"{name} ({size:.1f}GB) {status}")
 
     def switch_to_selected_model(self):
-        item = self.models_list.currentItem()
-        if not item: return
+        items = self.models_list.selectedItems()
+        if not items:
+            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NO MODEL SELECTED</i></p>")
+            return
         
-        target = item.text().split(" ")[0] # extract just the name
+        target = items[0].text().split(" ")[0] # extract just the name
         self.model = target
         
         # Add to header dropdown if it's new
@@ -494,7 +496,9 @@ class AuraWindow(QMainWindow):
             self.model_selector.addItem(display_name)
 
         self._sync_model_selector()
-        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {target}</i></p>")
+        
+        friendly_name = OllamaClient.MODELS.get(target, {"name": f"[RAW] {target}"})["name"]
+        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
 
     def pull_model(self):
         model_name = self.pull_input.text().strip()
@@ -747,7 +751,7 @@ class AuraWindow(QMainWindow):
                         content_html = self.md.render(msg["content"])
                         msg["_rendered_html"] = content_html
                 
-                html_content += f"<div style='color: #D4AF37;'><b>{msg['model'].upper()}</b></div>"
+                html_content += f"<div style='color: #FFD700; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
                 html_content += f"<div style='color: #B0B0B0;'>{content_html}</div><br>"
         
         self.output_area.setHtml(html_content)

@@ -1,0 +1,57 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace 'com.aura.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.aura.app"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        
+        ndk {
+            // Required by Chaquopy for native libraries
+            abiFilters "arm64-v8a", "x86_64"
+        }
+    }
+    
+    buildFeatures {
+        compose true
+    }
+    
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.1'
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.11"
+        pip {
+            // Define core Python dependencies here
+            install "requests"
+            install "google-genai"
+            install "anthropic"
+        }
+    }
+    sourceSets {
+        main {
+            // Map the Python source path directly to our shared core directory
+            srcDirs = ["../../core"] 
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation platform('androidx.compose:compose-bom:2024.02.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.material3:material3'
+}

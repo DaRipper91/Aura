@@ -1,0 +1,42 @@
+name: Build Aura Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'android/**'
+      - 'core/**'
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant Execute Permission for Gradle
+        run: chmod +x android/gradlew
+        working-directory: ./android
+
+      - name: Build Debug APK with Chaquopy
+        # This compiles the Kotlin UI and packages the Python core via Chaquopy
+        run: ./gradlew assembleDebug
+        working-directory: ./android
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk

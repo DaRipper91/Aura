@@ -15,75 +15,45 @@
 ---
 
 ## 🔭 Project Vision
-**Aura** is a minimalist, terminal-aesthetic GUI designed for high-speed interaction with local Large Language Models (LLMs) via Ollama. It features a **Zig-based Bolt Engine** for low-latency streaming and a hybrid Python/PySide6 UI for a fluid, "living terminal" experience.
+**Aura** is a minimalist, local AI orchestration engine featuring a **Dual-Target Architecture**. It allows users to run a high-speed, terminal-native CLI on Linux while sharing the exact same Python intelligence core with a native Android application.
 
 > "Gaze into the void, and let the Aether answer."
 
 ---
 
 ## ⚡ Core Mandates
-- **[SYSTEM]** Hybrid Python 3.12+ (UI) & Zig 0.16.0 (Engine) implementation.
-- **[VISUAL]** High-contrast, cyber-monospace aesthetic.
-- **[LOGIC]** Multi-voice orchestration (Phi, Gemma, Qwen, DeepSeek).
-- **[ENGINE]** **Bolt Core:** Zig-powered real-time streaming with zero-copy JSON parsing.
+- **[ARCHITECTURE]** Strict separation of concerns: Pure Python engine (`core/`), Linux terminal interface (`cli/`), and Android UI wrapper (`android/`).
+- **[VISUAL]** High-contrast, cyber-monospace aesthetic (Obsidian & Gold/Purple).
+- **[LOGIC]** Multi-voice orchestration (Ollama, Gemini, Claude, Codex).
+- **[INTEGRATION]** Zero-friction mobile deployment via `Chaquopy` and GitHub Actions.
 
 ---
 
-## 🛠️ Tech Stack
-- **UI Engine:** `PySide6` (Qt for Python)
-- **High-Performance Core:** `Zig 0.16.0` (Ollama Bolt Engine)
-- **Model Orchestration:** `Ollama` API
-- **Formatting:** `markdown-it-py` (CommonMark compliant)
+## 🏗️ Repository Structure
 
----
-
-## ⌨️ Command Interface
-Aura utilizes a "Command First" approach for model orchestration.
-
-| Command | Voice | Specialization |
-| :--- | :--- | :--- |
-| `/phi` | **Phi-3 Mini** | Logic & Structured Reasoning |
-| `/gemma` | **Gemma 2 2B** | Creative & Expressive Prose |
-| `/qwen` | **Qwen 2.5 Coder** | Expert Software Engineering |
-| `/deepseek`| **DeepSeek R1** | Reasoning & Step-by-Step Logic |
+1. **`core/`** 
+   - The pure Python brain of Aura. Handles API orchestration, streaming generation, and multi-turn context. Contains absolutely zero UI or terminal-specific code.
+2. **`cli/`** 
+   - The Linux TUI/CLI entry point. Imports the `core/` logic and handles local standard I/O, terminal formatting, and typing effects.
+3. **`android/`** 
+   - A native Android project using Kotlin and Jetpack Compose. Embeds the Python `core/` natively inside the APK using the Chaquopy plugin.
 
 ---
 
 ## 🚀 Deployment
 
-### 1. Prerequisites
-Ensure you have **Ollama** installed and the following models pulled:
+### Local Linux CLI
+Run the terminal-native interface directly:
 ```bash
-ollama pull phi3:mini
-ollama pull gemma2:2b
-ollama pull qwen2.5-coder:1.5b
-ollama pull deepseek-r1:8b
+python cli/main.py
 ```
 
-### 2. Build the Bolt Engine (Zig)
-```bash
-cd aura/bolt
-zig build -Doptimize=ReleaseFast
-```
-
-### 3. Install Python UI Dependencies
-```bash
-# From project root
-pip install PySide6 requests markdown-it-py
-```
-
-### 4. Execution
-```bash
-python main.py
-```
-
----
-
-## 🌌 The Aesthetic
-Aura is designed to feel "alive."
-- **Void Settings:** Real-time control over Temperature, Top\_P, and Context.
-- **Dynamic Typography:** Hot-swapping of monospace fonts and sizes.
-- **Pulsing Typewriter:** Low-latency token rendering powered by the Zig core.
+### Android APK (Automated via GitHub Actions)
+You do not need to build the Android app locally. 
+1. Push code changes to the `main` branch.
+2. The `.github/workflows/build-apk.yml` pipeline will automatically trigger.
+3. It provisions a JDK 17 environment, syncs the Python `core/` via Chaquopy, and compiles the Android App.
+4. Download the compiled `app-debug.apk` directly from the **GitHub Actions Artifacts** page and install it on your device.
 
 ---
 
