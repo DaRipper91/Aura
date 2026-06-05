@@ -26,13 +26,11 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Grant Execute Permission for Gradle
-        run: chmod +x android/gradlew
-        working-directory: ./android
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build Debug APK with Chaquopy
-        # This compiles the Kotlin UI and packages the Python core via Chaquopy
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
         working-directory: ./android
 
       - name: Upload APK Artifact

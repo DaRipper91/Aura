@@ -11,5 +11,8 @@ jobs:
     steps:
       - name: "Summoning Bolt Agent"
         run: |
-          echo "Summoning Jules (Bolt) for nightly performance profiling..."
+          export PYTHONPATH=$PYTHONPATH:.
+          echo "Summoning Jules (Bolt) for Linux profiling..."
           python3 aura/core/jules/bolt.py
+          echo "Summoning Jules (Bolt) for Android profiling..."
+          python3 aura/core/jules/android_bolt.py

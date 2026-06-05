@@ -1,66 +1,51 @@
-# 🌌 Aura // Local AI Interchange
+# 🌌 Aura // Dual-Target AI Orchestration
 
-<p align="center">
-  <img src="aura/ui/icon.svg" width="128" height="128" alt="Aura Icon">
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/Zig-0.16.0-F7A41D?style=for-the-badge&logo=zig&logoColor=white" alt="Zig">
-  <img src="https://img.shields.io/badge/PySide6-GUI-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="PySide6">
-  <img src="https://img.shields.io/badge/Ollama-Local_LLM-white?style=for-the-badge&logo=ollama&logoColor=black" alt="Ollama">
-  <img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="MIT License">
-</p>
+Aura is a high-performance local AI interchange designed for a **Dual-Target Architecture**. It allows you to run a terminal-aesthetic GUI or a native TUI on Linux while sharing the exact same Python intelligence core with a native Android application.
 
 ---
 
-## 🔭 Project Vision
-**Aura** is a minimalist, local AI orchestration engine featuring a **Dual-Target Architecture**. It allows users to run a high-speed, terminal-native CLI on Linux while sharing the exact same Python intelligence core with a native Android application.
+## 🏗️ Repository Architecture
 
-> "Gaze into the void, and let the Aether answer."
-
----
-
-## ⚡ Core Mandates
-- **[ARCHITECTURE]** Strict separation of concerns: Pure Python engine (`core/`), Linux terminal interface (`cli/`), and Android UI wrapper (`android/`).
-- **[VISUAL]** High-contrast, cyber-monospace aesthetic (Obsidian & Gold/Purple).
-- **[LOGIC]** Multi-voice orchestration (Ollama, Gemini, Claude, Codex).
-- **[INTEGRATION]** Zero-friction mobile deployment via `Chaquopy` and GitHub Actions.
-
----
-
-## 🏗️ Repository Structure
-
-1. **`core/`** 
-   - The pure Python brain of Aura. Handles API orchestration, streaming generation, and multi-turn context. Contains absolutely zero UI or terminal-specific code.
-2. **`cli/`** 
-   - The Linux TUI/CLI entry point. Imports the `core/` logic and handles local standard I/O, terminal formatting, and typing effects.
-3. **`android/`** 
-   - A native Android project using Kotlin and Jetpack Compose. Embeds the Python `core/` natively inside the APK using the Chaquopy plugin.
+1.  **`core/`** 🧠
+    - The pure Python brain. Handles multi-turn context tracking, API orchestration (Ollama, Gemini, Claude), and real-time streaming logic.
+    - Strictly logic-only. Zero UI/Terminal dependencies.
+2.  **`cli/`** ⌨️
+    - The Linux TUI/CLI entry point. Consumes the `core/` logic and handles terminal standard I/O and text formatting for localized Linux workflows.
+3.  **`aura/`** 🌌
+    - The terminal-aesthetic PySide6 GUI (Aura Dashboard). Optimized for high-contrast, cyber-monospace desktop interaction.
+4.  **`android/`** 📱
+    - A native Android project using Kotlin and Jetpack Compose. Embeds the Python `core/` natively via the **Chaquopy** plugin for on-device orchestration.
 
 ---
 
 ## 🚀 Deployment
 
-### Local Linux CLI
-Run the terminal-native interface directly:
+### 1. Linux GUI (Desktop)
+Run the minimalist PySide6 dashboard:
+```bash
+python main.py
+```
+
+### 2. Linux TUI (CLI)
+Run the direct terminal interface:
 ```bash
 python cli/main.py
 ```
 
-### Android APK (Automated via GitHub Actions)
-You do not need to build the Android app locally. 
-1. Push code changes to the `main` branch.
-2. The `.github/workflows/build-apk.yml` pipeline will automatically trigger.
-3. It provisions a JDK 17 environment, syncs the Python `core/` via Chaquopy, and compiles the Android App.
-4. Download the compiled `app-debug.apk` directly from the **GitHub Actions Artifacts** page and install it on your device.
+### 3. Android APK (Mobile)
+You do not need to build the APK locally. 
+- **CI/CD:** Every push to the `main` branch triggers the `.github/workflows/build-apk.yml` workflow.
+- **Artifacts:** Once the build finishes, download the `aura-debug-apk` from the GitHub Actions run and install it directly on your Android device.
 
 ---
 
-<p align="center">
-  <i>Part of the Local AI Interchange Initiative.</i><br>
-  <b>[ DISCONNECT FROM THE CLOUD. CONNECT TO THE VOID. ]</b>
-</p>
+## 🛠️ Tech Stack & Mandates
+- **Intelligence Core:** Python 3.12+ (AuraEngine)
+- **Local Runtime:** Ollama API
+- **Desktop UI:** PySide6 (Fusion Theme)
+- **Mobile UI:** Jetpack Compose + Kotlin
+- **Mobile Runtime:** Chaquopy (Embedded Python 3.11)
+- **Engine Core:** **Bolt** (High-performance streaming engine)
 
 ---
 

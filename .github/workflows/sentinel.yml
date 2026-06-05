@@ -11,5 +11,8 @@ jobs:
     steps:
       - name: "Summoning Sentinel Agent"
         run: |
-          echo "Summoning Jules (Sentinel) for nightly security sweep..."
+          export PYTHONPATH=$PYTHONPATH:.
+          echo "Summoning Jules (Sentinel) for Linux sweep..."
           python3 aura/core/jules/sentinel.py
+          echo "Summoning Jules (Sentinel) for Android sweep..."
+          python3 aura/core/jules/android_sentinel.py

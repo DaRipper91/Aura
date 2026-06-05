@@ -11,5 +11,8 @@ jobs:
     steps:
       - name: "Summoning Palette Agent"
         run: |
-          echo "Summoning Jules (Palette) for weekly UX audit..."
+          export PYTHONPATH=$PYTHONPATH:.
+          echo "Summoning Jules (Palette) for Linux audit..."
           python3 aura/core/jules/palette.py
+          echo "Summoning Jules (Palette) for Android audit..."
+          python3 aura/core/jules/android_palette.py
