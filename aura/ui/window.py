@@ -148,6 +148,7 @@ class AuraWindow(QMainWindow):
             "num_ctx": 4096
         }
         self.md = MarkdownIt()
+        self.load_custom_fonts()
         
         self.setStyleSheet("""
             QMainWindow { background-color: #080808; }
