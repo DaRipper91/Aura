@@ -37,6 +37,17 @@ class OllamaClient:
         }
         return prompts.get(model, base_identity)
 
+    def get_available_models(self) -> list[dict]:
+        """Queries Ollama for all locally installed models."""
+        try:
+            response = requests.get(f"{self.base_url}/api/tags")
+            if response.status_code == 200:
+                models = response.json().get("models", [])
+                return models
+        except:
+            pass
+        return []
+
     def stream_chat(self, model: str, prompt: str, options: Optional[dict] = None) -> Generator[str, None, None]:
         url = f"{self.base_url}/api/generate"
         system_prompt = self.get_system_prompt(model)

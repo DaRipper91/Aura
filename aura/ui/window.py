@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTextEdit, QLineEdit, 
     QLabel, QHBoxLayout, QSlider, QFormLayout, QGroupBox, QPushButton,
-    QComboBox, QFileDialog
+    QComboBox, QFileDialog, QListWidget
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QIcon, QFontDatabase, QFont
@@ -12,7 +12,29 @@ import os
 import ctypes
 import json
 import html
+import subprocess
 from typing import Optional
+
+class PullWorker(QThread):
+    finished = Signal(bool, str)
+
+    def __init__(self, model_name: str):
+        super().__init__()
+        self.model_name = model_name
+
+    def run(self):
+        try:
+            process = subprocess.run(
+                ["ollama", "pull", self.model_name],
+                capture_output=True,
+                text=True
+            )
+            if process.returncode == 0:
+                self.finished.emit(True, f"Successfully pulled {self.model_name}")
+            else:
+                self.finished.emit(False, f"Failed to pull {self.model_name}: {process.stderr.strip()}")
+        except Exception as e:
+            self.finished.emit(False, str(e))
 
 class ChatWorker(QThread):
     chunk_received = Signal(str)
@@ -93,8 +115,18 @@ class AuraWindow(QMainWindow):
         "settings_panel", "temp_label", "temp_slider", "top_p_label",
         "top_p_slider", "ctx_label", "ctx_slider", "font_combo",
         "font_size_slider", "dir_label", "dir_btn", "messages",
-        "pending_message", "current_response_text", "worker"
+        "pending_message", "current_response_text", "worker", "workspace_label",
+        "model_selector", "model_mapping", "discover_btn"
     )
+
+    def get_git_branch(self, path):
+        import subprocess
+        try:
+            result = subprocess.run(["git", "branch", "--show-current"], cwd=path, capture_output=True, text=True, check=True)
+            branch = result.stdout.strip()
+            return f" {branch}" if branch else ""
+        except:
+            return ""
 
     def __init__(self):
         super().__init__()
@@ -212,6 +244,11 @@ class AuraWindow(QMainWindow):
         header.addWidget(self.status_label)
         header.addStretch()
         
+        self.models_toggle = QPushButton("MODELS")
+        self.models_toggle.setCheckable(True)
+        self.models_toggle.clicked.connect(self.toggle_models)
+        header.addWidget(self.models_toggle)
+        
         self.settings_toggle = QPushButton("VOID_SETTINGS")
         self.settings_toggle.setCheckable(True)
         self.settings_toggle.clicked.connect(self.toggle_settings)
@@ -228,6 +265,15 @@ class AuraWindow(QMainWindow):
         self.input_field.setPlaceholderText("DESCRIBE THE VOID...")
         self.input_field.returnPressed.connect(self.process_input)
         chat_container.addWidget(self.input_field)
+
+        # Footer for workspace status (gemini-cli style)
+        footer = QHBoxLayout()
+        branch = self.get_git_branch(self.engine.project_root)
+        self.workspace_label = QLabel(f"[{self.engine.project_root}] {branch}".strip())
+        self.workspace_label.setStyleSheet("color: #6633FF; font-family: 'Monospace'; font-size: 10px;")
+        footer.addStretch()
+        footer.addWidget(self.workspace_label)
+        chat_container.addLayout(footer)
 
         main_layout.addLayout(chat_container, stretch=4)
 
@@ -298,10 +344,61 @@ class AuraWindow(QMainWindow):
         
         ws_group.setLayout(ws_layout)
         settings_layout.addWidget(ws_group)
+
+        # 4. Add Model
+        pull_group = QGroupBox("ADD_MODEL")
+        pull_layout = QHBoxLayout()
+        self.pull_input = QLineEdit()
+        self.pull_input.setPlaceholderText("e.g. llama3")
+        self.pull_btn = QPushButton("PULL")
+        self.pull_btn.clicked.connect(self.pull_model)
+        pull_layout.addWidget(self.pull_input)
+        pull_layout.addWidget(self.pull_btn)
+        pull_group.setLayout(pull_layout)
+        settings_layout.addWidget(pull_group)
         
         settings_layout.addStretch()
         self.settings_panel.setLayout(settings_layout)
+
+        # Models Panel
+        self.models_panel = QWidget()
+        self.models_panel.setFixedWidth(300)
+        self.models_panel.setVisible(False)
+        mp_layout = QVBoxLayout()
+        mp_layout.setContentsMargins(20, 30, 20, 30)
         
+        mp_label = QLabel("LOCAL_MODELS //")
+        mp_layout.addWidget(mp_label)
+        
+        self.models_list = QListWidget()
+        self.models_list.setStyleSheet("""
+            QListWidget {
+                background-color: #0F0F0F;
+                color: #D4AF37;
+                border: 1px solid #1A1A1A;
+                font-family: 'Monospace';
+                font-size: 11px;
+            }
+            QListWidget::item:selected {
+                background-color: #2D1B4E;
+            }
+        """)
+        mp_layout.addWidget(self.models_list)
+        
+        btn_layout = QHBoxLayout()
+        switch_btn = QPushButton("SWITCH")
+        switch_btn.clicked.connect(self.switch_to_selected_model)
+        btn_layout.addWidget(switch_btn)
+
+        refresh_btn = QPushButton("REFRESH")
+        refresh_btn.clicked.connect(self.populate_models_list)
+        btn_layout.addWidget(refresh_btn)
+        
+        mp_layout.addLayout(btn_layout)
+        
+        self.models_panel.setLayout(mp_layout)
+        
+        main_layout.addWidget(self.models_panel)
         main_layout.addWidget(self.settings_panel)
 
         central_widget = QWidget()
@@ -327,8 +424,99 @@ class AuraWindow(QMainWindow):
                         if family not in self.available_fonts:
                             self.available_fonts.insert(0, family)
 
+    def discover_models(self):
+        self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // DISCOVERING LOCAL MODELS...</i></p>")
+        available = self.engine.get_available_models()
+        if not available:
+            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NO MODELS FOUND ON OLLAMA SERVER</i></p>")
+        else:
+            for m in available:
+                name = m.get("name", "Unknown")
+                size = m.get("size", 0) / (1024**3)
+                status = "[TUNED]" if name in OllamaClient.MODELS else "[RAW]"
+                self.output_area.append(f"<p style='color: #B0B0B0; font-family: Monospace;'>• <b>{name}</b> ({size:.1f} GB) <span style='color: #404040;'>{status}</span></p>")
+        self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>USE /model <name> TO SWITCH OR SELECT FROM HEADER</i></p>")
+
     def toggle_settings(self):
+        if self.settings_toggle.isChecked():
+            self.models_toggle.setChecked(False)
+            self.models_panel.setVisible(False)
         self.settings_panel.setVisible(self.settings_toggle.isChecked())
+
+    def _sync_model_selector(self):
+        for i in range(self.model_selector.count()):
+            if self.model_mapping.get(self.model_selector.itemText(i)) == self.model:
+                self.model_selector.blockSignals(True)
+                self.model_selector.setCurrentIndex(i)
+                self.model_selector.blockSignals(False)
+                break
+
+    def change_model_from_selector(self, text):
+        if text in self.model_mapping:
+            new_model = self.model_mapping[text]
+            if self.model != new_model:
+                self.model = new_model
+                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {text}</i></p>")
+
+    def toggle_models(self):
+        if self.models_toggle.isChecked():
+            self.settings_toggle.setChecked(False)
+            self.settings_panel.setVisible(False)
+            self.populate_models_list()
+        self.models_panel.setVisible(self.models_toggle.isChecked())
+
+    def populate_models_list(self):
+        self.models_list.clear()
+        available = self.engine.get_available_models()
+        for m in available:
+            name = m.get("name", "Unknown")
+            size = m.get("size", 0) / (1024**3)
+            status = "[TUNED]" if name in OllamaClient.MODELS else "[RAW]"
+            self.models_list.addItem(f"{name} ({size:.1f}GB) {status}")
+
+    def switch_to_selected_model(self):
+        item = self.models_list.currentItem()
+        if not item: return
+        
+        target = item.text().split(" ")[0] # extract just the name
+        self.model = target
+        
+        # Add to header dropdown if it's new
+        found_in_header = False
+        for i in range(self.model_selector.count()):
+            if self.model_mapping.get(self.model_selector.itemText(i)) == target:
+                found_in_header = True
+                break
+        
+        if not found_in_header:
+            display_name = f"[RAW] {target}"
+            self.model_mapping[display_name] = target
+            self.model_selector.addItem(display_name)
+
+        self._sync_model_selector()
+        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {target}</i></p>")
+
+    def pull_model(self):
+        model_name = self.pull_input.text().strip()
+        if not model_name: return
+        self.pull_btn.setEnabled(False)
+        self.pull_btn.setText("PULLING...")
+        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Pulling {model_name} from Ollama...</i></p>")
+        
+        self.pull_worker = PullWorker(model_name)
+        self.pull_worker.finished.connect(self.on_pull_finished)
+        self.pull_worker.start()
+
+    def on_pull_finished(self, success, message):
+        self.pull_btn.setEnabled(True)
+        self.pull_btn.setText("PULL")
+        self.pull_input.clear()
+        safe_msg = html.escape(message)
+        color = "#41CD52" if success else "#FF5555"
+        self.output_area.append(f"<p style='color: {color}; font-family: Monospace;'><i>SYSTEM // {safe_msg}</i></p>")
+        if success:
+            self.populate_models_list()
+
 
     def update_temp(self, val):
         self.gen_options['temperature'] = val / 100.0
@@ -360,6 +548,8 @@ class AuraWindow(QMainWindow):
             self.engine.project_root = new_dir
             self.dir_label.setText(f"DIR: {os.path.basename(new_dir)}")
             self.dir_label.setToolTip(new_dir)
+            branch = self.get_git_branch(new_dir)
+            self.workspace_label.setText(f"[{new_dir}] {branch}".strip())
             safe_new_dir = html.escape(new_dir)
             self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Workspace updated: {safe_new_dir}</i></p>")
 
@@ -367,21 +557,86 @@ class AuraWindow(QMainWindow):
         text = self.input_field.text().strip()
         if not text: return
         
+        # 1. Navigation Handling (cd command)
+        if text.startswith("cd "):
+            target = text[3:].strip()
+            if target == "~":
+                target = os.path.expanduser("~")
+            
+            new_path = os.path.normpath(os.path.join(self.engine.project_root, target))
+            
+            if os.path.isdir(new_path):
+                self.engine.project_root = new_path
+                # Update UI elements representing directory
+                self.dir_label.setText(f"DIR: {os.path.basename(new_path)}")
+                self.dir_label.setToolTip(new_path)
+                branch = self.get_git_branch(new_path)
+                self.workspace_label.setText(f"[{new_path}] {branch}".strip())
+                safe_path = html.escape(new_path)
+                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Context shifted to: {safe_path}</i></p>")
+            else:
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ERROR: Directory not found: {target}</i></p>")
+            
+            self.input_field.clear()
+            return
+
         if text.startswith("/"):
             cmd = text[1:].lower()
+            
+            alias_map = {
+                "phi": "phi3:mini",
+                "gemma": "gemma2:2b",
+                "qwen": "qwen2.5:7b",
+                "coder": "qwen2.5-coder:1.5b",
+                "deep": "deepseek-r1:8b",
+                "noon": "moondream",
+                "samist": "samantha-mistral"
+            }
+
             if cmd == "help":
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // AVAILABLE VOICES:</i></p>")
-                for m_id, m_info in OllamaClient.MODELS.items():
-                    short_name = m_id.split(":")[0].split("-")[0].split(".")[0].lower()
-                    self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{short_name}</b> - {OllamaClient.MODELS[m_id]['name']}</p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // TUNED VOICES:</i></p>")
+                for alias, m_id in alias_map.items():
+                    if m_id in OllamaClient.MODELS:
+                        self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{alias}</b> - {OllamaClient.MODELS[m_id]['name']}</p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>TYPE /MODELS TO SCAN LOCAL SYSTEM</i></p>")
                 self.input_field.clear()
                 return
+
+            if cmd == "models":
+                self.discover_models()
+                self.input_field.clear()
+                return
+
+            if cmd.startswith("model "):
+                target = cmd[6:].strip()
+                for display_name, m_id in self.model_mapping.items():
+                    if target in m_id.lower():
+                        self.model = m_id
+                        self._sync_model_selector()
+                        friendly_name = OllamaClient.MODELS.get(m_id, {"name": f"[RAW] {m_id}"})["name"]
+                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
+                        self.input_field.clear()
+                        return
+                
+                safe_target = html.escape(target)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Model not found: {safe_target}</i></p>")
+                self.input_field.clear()
+                return
+
+            if cmd in alias_map:
+                target_model = alias_map[cmd]
+                if target_model in self.models:
+                    self.model = target_model
+                    self._sync_model_selector()
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {OllamaClient.MODELS[self.model]['name']}</i></p>")
+                    self.input_field.clear()
+                    return
 
             found = False
             for key in self.models:
                 if cmd in key.lower():
                     self.model = key
-                    self.status_label.setText(f"ACTIVE_VOICE // {OllamaClient.MODELS[self.model]['name']}")
+                    self._sync_model_selector()
                     self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {OllamaClient.MODELS[self.model]['name']}</i></p>")
                     found = True
                     break
