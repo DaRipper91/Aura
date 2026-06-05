@@ -2,7 +2,7 @@ import requests
 import json
 import os
 from typing import Generator, Optional, List, Dict
-from .mandates import aura_component
+from aura_core.mandates import aura_component
 
 @aura_component
 class OllamaClient:

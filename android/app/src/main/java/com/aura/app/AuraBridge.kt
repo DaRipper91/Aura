@@ -1,15 +1,18 @@
 package com.aura.app
 
+import android.os.Handler
+import android.os.Looper
 import com.chaquo.python.Python
 import com.chaquo.python.PyObject
 
 class AuraBridge {
     private var pythonEngine: PyObject? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
         val py = Python.getInstance()
-        // Loads engine.py from aura_core/ (Mapped as sourceDir)
-        val engineModule = py.getModule("engine")
+        // Loads aura_core/engine.py (Full Python Build)
+        val engineModule = py.getModule("aura_core.engine")
         pythonEngine = engineModule.callAttr("OllamaClient")
     }
 
@@ -32,12 +35,13 @@ class AuraBridge {
                 
                 var fullResponse = ""
                 while (true) {
-                    // Pull the next chunk from the Python generator
                     val chunk = iterator?.callAttr("__next__")?.toString() ?: break
                     fullResponse += chunk
                     
-                    // Push state update to the Compose UI
-                    callback(fullResponse) 
+                    // Push state update to the UI thread for safe Compose updates and Haptics
+                    mainHandler.post {
+                        callback(fullResponse) 
+                    }
                 }
             } catch (e: Exception) {
                 // Python StopIteration ends the loop; catch it silently

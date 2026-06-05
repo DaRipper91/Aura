@@ -48,8 +48,8 @@ chaquopy {
     }
     sourceSets {
         main {
-            // Map the Python source path to the shared aura_core package
-            srcDirs = ["../../aura_core"] 
+            // Map the Python source path to the project root to maintain package structure
+            srcDirs = ["../../"] 
         }
     }
 
@@ -57,6 +57,7 @@ chaquopy {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.activity:activity-compose:1.8.2'
     implementation platform('androidx.compose:compose-bom:2024.02.00')
     implementation 'androidx.compose.ui:ui'
