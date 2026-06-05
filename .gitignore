@@ -1,2 +1,32 @@
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Android
+.gradle/
+build/
+app/build/
+*.iml
+.idea/
+local.properties
+.cxx/
+*.apk
+*.aar
+
+# Project Specific
+release-assets/
+release-v104/
+android-studio.tar.gz
+android-studio-arm.tar.gz
+ideaIC-arm64.tar.gz
+python/aura/ui/fonts/*.zip
+
+# Gemini / Jules
+.gemini/
+.jules/
+GEMINI.md
+MEMORY.md
