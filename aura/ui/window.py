@@ -150,6 +150,12 @@ class AuraWindow(QMainWindow):
         self.md = MarkdownIt()
         self.load_custom_fonts()
         
+        # Model Management
+        self.model_mapping = {v['name']: k for k, v in OllamaClient.MODELS.items()}
+        self.model_selector = QComboBox()
+        self.model_selector.addItems(list(self.model_mapping.keys()))
+        self.model_selector.currentTextChanged.connect(self.change_model_from_selector)
+        
         self.setStyleSheet("""
             QMainWindow { background-color: #080808; }
             QTextEdit { 
