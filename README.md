@@ -1,6 +1,9 @@
 # 🌌 Aura // Standalone AI Helper
 
-Aura is a high-performance local AI interchange designed for **Standalone Mobile Intelligence**. It transforms your phone from a simple chat interface into an autonomous "Helper" using on-device NPU acceleration and advanced system-level orchestration.
+[![Latest Release](https://img.shields.io/github/v/release/DaRipper91/Aura?color=D4AF37&label=DOWNLOAD%20APK&style=for-the-badge)](https://github.com/DaRipper91/Aura/releases/latest)
+
+Aura is a high-performance local AI interchange designed for **Standalone Mobile Intelligence**.
+ It transforms your phone from a simple chat interface into an autonomous "Helper" using on-device NPU acceleration and advanced system-level orchestration.
 
 ---
 
