@@ -136,27 +136,10 @@ class AuraWindow(QMainWindow):
         
         # Initialize Engine
         self.engine = OllamaClient()
-        
-        # Load Custom Fonts
-        self.load_custom_fonts()
-        
-        # Default Options
-        self.gen_options = {
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "num_ctx": 4096,
-            "repeat_penalty": 1.1
-        }
-        
-        # Set Application Icon
-        icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
-        
-        self.md = MarkdownIt()
-        self.models = list(OllamaClient.MODELS.keys())
-        self.model_index = 0
-        self.model = self.models[self.model_index]
+        self.models = [m['name'] for m in self.engine.get_available_models()]
+        if not self.models:
+            self.models = ["qwen2.5:7b"]
+        self.model = self.models[0]
         
         self.setStyleSheet("""
             QMainWindow { background-color: #080808; }
@@ -749,6 +732,14 @@ class AuraWindow(QMainWindow):
                     content_html = msg.get("_rendered_html")
                     if content_html is None:
                         content_html = self.md.render(msg["content"])
+                        msg["_rendered_html"] = content_html
+                
+                html_content += f"<div style='color: #FFD700; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
+                html_content += f"<div style='color: #B0B0B0;'>{content_html}</div><br>"
+        
+        self.output_area.setHtml(html_content)
+        self.output_area.moveCursor(self.output_area.textCursor().MoveOperation.End)
+g["content"])
                         msg["_rendered_html"] = content_html
                 
                 html_content += f"<div style='color: #FFD700; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
