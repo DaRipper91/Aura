@@ -147,6 +147,10 @@ class AuraWindow(QMainWindow):
                 padding: 14px;
                 border-radius: 2px;
             }
+            QLineEdit:focus {
+                border: 1px solid #8833FF;
+                background-color: #121212;
+            }
             QLabel {
                 color: #404040;
                 font-family: 'Monospace';
@@ -179,6 +183,10 @@ class AuraWindow(QMainWindow):
                 color: #D4AF37;
                 border-color: #2D1B4E;
             }
+            QPushButton:focus {
+                border: 1px solid #8833FF;
+                color: #E0E0E0;
+            }
             QComboBox {
                 background-color: #0F0F0F;
                 color: #E0E0E0;
@@ -186,6 +194,9 @@ class AuraWindow(QMainWindow):
                 padding: 5px;
                 font-family: 'Monospace';
                 font-size: 10px;
+            }
+            QComboBox:focus {
+                border: 1px solid #8833FF;
             }
         """)
 
