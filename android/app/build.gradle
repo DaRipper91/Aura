@@ -34,10 +34,8 @@ chaquopy {
     defaultConfig {
         version = "3.11"
         pip {
-            // Define core Python dependencies here
+            // Use core dependencies that don't require Rust/Maturin build-time
             install "requests"
-            install "google-genai"
-            install "anthropic"
         }
     }
     sourceSets {
