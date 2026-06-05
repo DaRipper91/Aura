@@ -12,4 +12,4 @@ jobs:
       - name: "Summoning Sentinel Agent"
         run: |
           echo "Summoning Jules (Sentinel) for nightly security sweep..."
-          echo "Focus: Dependency safety, Secret scanning, and API integrity."
+          python3 aura/core/jules/sentinel.py

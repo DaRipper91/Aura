@@ -12,4 +12,4 @@ jobs:
       - name: "Summoning Palette Agent"
         run: |
           echo "Summoning Jules (Palette) for weekly UX audit..."
-          echo "Focus: Aesthetic consistency, Monospace hierarchy, and UI polish."
+          python3 aura/core/jules/palette.py

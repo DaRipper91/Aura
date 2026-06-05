@@ -12,6 +12,7 @@ class OllamaClient:
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
         self.project_root = os.getcwd()
+        self.check_mandates()
 
     MODELS = {
         "phi3:mini": {"name": "Phi-3 Mini (Reasoning)"},

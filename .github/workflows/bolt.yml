@@ -12,4 +12,4 @@ jobs:
       - name: "Summoning Bolt Agent"
         run: |
           echo "Summoning Jules (Bolt) for nightly performance profiling..."
-          echo "Focus: Latency optimization, Memory footprint, and Streaming speed."
+          python3 aura/core/jules/bolt.py
