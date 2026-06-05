@@ -78,6 +78,16 @@ class AuraWindow(QMainWindow):
         except:
             return ""
 
+    def ensure_ollama_running(self):
+        try:
+            import requests
+            requests.get("http://localhost:11434/", timeout=1)
+        except:
+            print("OLLAMA // Starting server...")
+            subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            import time
+            time.sleep(2) # Give it a moment to bind
+
     def __init__(self):
         super().__init__()
         self.check_mandates() # Decorator enforced method
@@ -88,6 +98,9 @@ class AuraWindow(QMainWindow):
         icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
+        
+        # 🚀 AUTO-START OLLAMA
+        self.ensure_ollama_running()
         
         # Initialize Engine
         self.engine = OllamaClient()
