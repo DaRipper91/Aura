@@ -3,7 +3,12 @@ import json
 import os
 from typing import Generator, Optional
 
+from aura.core.mandates import aura_component
+
+@aura_component
 class OllamaClient:
+    __slots__ = ("base_url", "project_root")
+    
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
         self.project_root = os.getcwd()
