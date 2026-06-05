@@ -1,0 +1,60 @@
+name: Build Aura Xbox MSIX
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'python/**'
+      - 'main.py'
+      - 'xbox/**'
+      - '.github/workflows/build-xbox.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install PySide6 requests pyinstaller
+
+    - name: Build EXE for Xbox
+      run: |
+        # Build as a folder first to bundle with manifest
+        pyinstaller --onedir --windowed --name Aura_v1.0.5_Xbox main.py
+
+    - name: Prepare MSIX Package
+      run: |
+        mkdir package
+        cp -r dist/Aura_v1.0.5_Xbox/* package/
+        cp xbox/AppxManifest.xml package/
+        
+        # Create placeholder assets
+        mkdir package/Assets
+        # (Usually you'd have real images, but we'll use an empty file or dummy for CI)
+        echo "dummy" > package/Assets/StoreLogo.png
+        echo "dummy" > package/Assets/Square150x150Logo.png
+        echo "dummy" > package/Assets/Square44x44Logo.png
+        echo "dummy" > package/Assets/Wide310x150Logo.png
+        echo "dummy" > package/Assets/SplashScreen.png
+
+    - name: Create MSIX
+      shell: pwsh
+      run: |
+        # Use MakeAppx from Windows SDK
+        $makeAppx = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe"
+        & $makeAppx pack /d package /p Aura_v1.0.5_Xbox.msix
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aura-xbox-msix
+        path: Aura_v1.0.5_Xbox.msix

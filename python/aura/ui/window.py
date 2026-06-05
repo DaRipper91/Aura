@@ -9,6 +9,7 @@ from aura_core.engine import OllamaClient
 from aura_core.mandates import aura_component
 from markdown_it import MarkdownIt
 import os
+import sys
 import ctypes
 import json
 import html
@@ -79,6 +80,7 @@ class AuraWindow(QMainWindow):
             return ""
 
     def ensure_ollama_running(self):
+        if getattr(self, 'console_mode', False): return
         try:
             import requests
             requests.get("http://localhost:11434/", timeout=1)
@@ -88,11 +90,22 @@ class AuraWindow(QMainWindow):
             import time
             time.sleep(2) # Give it a moment to bind
 
+    def check_console_mode(self):
+        # Detect if running on Xbox or via --console flag
+        self.console_mode = "--console" in sys.argv or os.environ.get("AURA_TARGET") == "XBOX"
+        if self.console_mode:
+            print("AURA // Console Mode Active [X64_XBOX]")
+
     def __init__(self):
         super().__init__()
+        self.check_console_mode()
         self.check_mandates() # Decorator enforced method
         self.setWindowTitle("Aura // Local AI")
-        self.resize(1200, 800)
+        
+        if getattr(self, 'console_mode', False):
+            self.showFullScreen()
+        else:
+            self.resize(1200, 800)
         
         # Set Window Icon
         icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
@@ -246,7 +259,7 @@ class AuraWindow(QMainWindow):
 
         # Right Side (Settings Panel)
         self.settings_panel = QWidget()
-        self.settings_panel.setFixedWidth(300)
+        self.settings_panel.setFixedWidth(450 if getattr(self, 'console_mode', False) else 300)
         self.settings_panel.setVisible(False)
         settings_layout = QVBoxLayout()
         settings_layout.setContentsMargins(20, 30, 20, 30)
@@ -329,7 +342,7 @@ class AuraWindow(QMainWindow):
 
         # Models Panel
         self.models_panel = QWidget()
-        self.models_panel.setFixedWidth(300)
+        self.models_panel.setFixedWidth(450 if getattr(self, 'console_mode', False) else 300)
         self.models_panel.setVisible(False)
         mp_layout = QVBoxLayout()
         mp_layout.setContentsMargins(20, 30, 20, 30)
@@ -378,6 +391,32 @@ class AuraWindow(QMainWindow):
         
         # Initial Font Application
         self.update_font(self.font_combo.currentText())
+        
+        # 🎮 XBOX: Enable Gamepad focus navigation
+        if getattr(self, 'console_mode', False):
+            self.setup_console_navigation()
+
+    def setup_console_navigation(self):
+        # Set larger base font for 10-foot UI
+        self.font_size_slider.setValue(22)
+        self.update_font_size(22)
+        
+        # Enable focus for all interactive widgets
+        for widget in [self.input_field, self.models_toggle, self.settings_toggle, self.models_list]:
+            widget.setFocusPolicy(Qt.StrongFocus)
+
+    def keyPressEvent(self, event):
+        # Map Gamepad Buttons (Standard UWP Mappings)
+        if getattr(self, 'console_mode', False):
+            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return: # Button A
+                self.process_input()
+            elif event.key() == Qt.Key_Escape: # Button B
+                self.input_field.clear()
+            elif event.key() == Qt.Key_F1: # Button X
+                self.settings_toggle.click()
+            elif event.key() == Qt.Key_F2: # Button Y
+                self.models_toggle.click()
+        super().keyPressEvent(event)
 
     def load_custom_fonts(self):
         self.available_fonts = ["Monospace", "Cascadia Code", "Consolas", "Courier New"]
