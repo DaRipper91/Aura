@@ -32,26 +32,46 @@ jobs:
         pyinstaller --onedir --windowed --name Aura_v1.0.5_Xbox main.py
 
     - name: Prepare MSIX Package
+      shell: pwsh
       run: |
         mkdir package
         cp -r dist/Aura_v1.0.5_Xbox/* package/
         cp xbox/AppxManifest.xml package/
         
-        # Create placeholder assets
+        # Create valid PNG placeholders
         mkdir package/Assets
-        # (Usually you'd have real images, but we'll use an empty file or dummy for CI)
-        echo "dummy" > package/Assets/StoreLogo.png
-        echo "dummy" > package/Assets/Square150x150Logo.png
-        echo "dummy" > package/Assets/Square44x44Logo.png
-        echo "dummy" > package/Assets/Wide310x150Logo.png
-        echo "dummy" > package/Assets/SplashScreen.png
+        Add-Type -AssemblyName System.Drawing
+        $bmp = New-Object System.Drawing.Bitmap(150, 150)
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.Clear([System.Drawing.Color]::FromArgb(15, 15, 15))
+        $bmp.Save("package/Assets/Square150x150Logo.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bmp.Save("package/Assets/StoreLogo.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bmp.Save("package/Assets/Square44x44Logo.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bmp.Save("package/Assets/Wide310x150Logo.png", [System.Drawing.Imaging.ImageFormat]::Png)
+        $bmp.Save("package/Assets/SplashScreen.png", [System.Drawing.Imaging.ImageFormat]::Png)
 
-    - name: Create MSIX
+    - name: Create and Sign MSIX
       shell: pwsh
       run: |
-        # Use MakeAppx from Windows SDK
-        $makeAppx = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe"
-        & $makeAppx pack /d package /p Aura_v1.0.5_Xbox.msix
+        # 1. Find Tools
+        $sdkPath = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*" | Sort-Object Name -Descending | Select-Object -First 1
+        $makeAppx = Join-Path $sdkPath.FullName "x64\makeappx.exe"
+        $signTool = Join-Path $sdkPath.FullName "x64\signtool.exe"
+        
+        # 2. Pack
+        & $makeAppx pack /d package /p Aura_v1.0.5_Xbox_Unsigned.msix /v
+
+        # 3. Create Self-Signed Cert
+        $certPassword = "AuraPassword123"
+        $secPassword = ConvertTo-SecureString -String $certPassword -Force -AsPlainText
+        $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=DaRipper91" -KeyUsage DigitalSignature -FriendlyName "Aura Dev Cert" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+        
+        $pfxPath = "AuraDevCert.pfx"
+        Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $secPassword
+
+        # 4. Sign
+        & $signTool sign /fd SHA256 /a /f $pfxPath /p $certPassword Aura_v1.0.5_Xbox_Unsigned.msix
+        mv Aura_v1.0.5_Xbox_Unsigned.msix Aura_v1.0.5_Xbox.msix
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
