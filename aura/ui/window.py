@@ -141,6 +141,14 @@ class AuraWindow(QMainWindow):
             self.models = ["qwen2.5:7b"]
         self.model = self.models[0]
         
+        # Generation Options
+        self.gen_options = {
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "num_ctx": 4096
+        }
+        self.md = MarkdownIt()
+        
         self.setStyleSheet("""
             QMainWindow { background-color: #080808; }
             QTextEdit { 
@@ -223,7 +231,8 @@ class AuraWindow(QMainWindow):
         chat_container.setSpacing(20)
         
         header = QHBoxLayout()
-        self.status_label = QLabel(f"ACTIVE_VOICE // {OllamaClient.MODELS[self.model]['name']}")
+        friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
+        self.status_label = QLabel(f"ACTIVE_VOICE // {friendly_name}")
         header.addWidget(self.status_label)
         header.addStretch()
         
@@ -615,7 +624,8 @@ class AuraWindow(QMainWindow):
                 if target_model in self.models:
                     self.model = target_model
                     self._sync_model_selector()
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {OllamaClient.MODELS[self.model]['name']}</i></p>")
+                    friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
                     self.input_field.clear()
                     return
 
@@ -624,7 +634,8 @@ class AuraWindow(QMainWindow):
                 if cmd in key.lower():
                     self.model = key
                     self._sync_model_selector()
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {OllamaClient.MODELS[self.model]['name']}</i></p>")
+                    friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
                     found = True
                     break
             
@@ -732,14 +743,6 @@ class AuraWindow(QMainWindow):
                     content_html = msg.get("_rendered_html")
                     if content_html is None:
                         content_html = self.md.render(msg["content"])
-                        msg["_rendered_html"] = content_html
-                
-                html_content += f"<div style='color: #FFD700; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
-                html_content += f"<div style='color: #B0B0B0;'>{content_html}</div><br>"
-        
-        self.output_area.setHtml(html_content)
-        self.output_area.moveCursor(self.output_area.textCursor().MoveOperation.End)
-g["content"])
                         msg["_rendered_html"] = content_html
                 
                 html_content += f"<div style='color: #FFD700; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
