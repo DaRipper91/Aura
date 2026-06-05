@@ -77,7 +77,9 @@ fun ChatScreen(bridge: AuraBridge) {
                 modifier = Modifier.weight(1f),
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    textColor = Color.White
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFFD4AF37)
                 )
             )
             Button(
