@@ -15,7 +15,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://maven.rikka.app/repository/maven-public/' }
     }
 }
 
