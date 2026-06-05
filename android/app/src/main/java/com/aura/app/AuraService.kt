@@ -14,7 +14,7 @@ class AuraService : Service() {
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Aura Engine Active")
             .setContentText("Aura is processing reasoning tasks in the background.")
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Placeholder
+            .setSmallIcon(R.drawable.ic_aura_logo)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
 
