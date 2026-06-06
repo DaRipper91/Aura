@@ -29,7 +29,7 @@ class OllamaClient:
         "MOBILE_STEALTH": {"num_ctx": 1024, "num_thread": 2, "f16_kv": False, "use_mmap": False, "use_mlock": False}
     }
 
-    def __init__(self, base_url: str = "http://localhost:11434"):
+    def __init__(self, base_url: str = "http://127.0.0.1:11434"):
         self.base_url = base_url
         self.project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
@@ -109,9 +109,10 @@ class OllamaClient:
             "options": merged_options
         }
 
+        headers = {"Content-Type": "application/json"}
         full_response = ""
         try:
-            response = requests.post(url, json=payload, stream=True)
+            response = requests.post(url, json=payload, headers=headers, stream=True)
             response.raise_for_status()
             for line in response.iter_lines():
                 if line:
@@ -124,6 +125,7 @@ class OllamaClient:
                         self.last_context = chunk.get("context")
                         break
         except Exception as e:
+            print(f"OLLAMA_ERROR // {str(e)}")
             yield f"\n[CONNECTION_ERROR] {str(e)}"
         
         self.history.append({"role": "assistant", "content": full_response})

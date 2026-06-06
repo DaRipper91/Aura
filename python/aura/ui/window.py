@@ -188,7 +188,7 @@ class AuraWindow(QMainWindow):
         if getattr(self, 'console_mode', False): return
         try:
             import requests
-            requests.get("http://localhost:11434/", timeout=1)
+            requests.get("http://127.0.0.1:11434/", timeout=1)
         except:
             print("OLLAMA // Starting server...")
             subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
