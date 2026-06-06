@@ -11,7 +11,7 @@ class OllamaClient:
     Handles API orchestration (Ollama, Gemini, Claude, Codex) and multi-turn context.
     Strictly logic-only; no UI/TUI rendering.
     """
-    __slots__ = ("base_url", "project_root", "history", "current_model", "last_context")
+    __slots__ = ("base_url", "project_root", "history", "current_model", "last_context", "verbosity", "active_profile")
 
     MODELS = {
         "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},

@@ -170,7 +170,9 @@ class AuraWindow(QMainWindow):
         "model_selector", "model_mapping", "discover_btn", "models_toggle",
         "models_panel", "models_list", "pull_input", "pull_btn", "pull_worker",
         "visualizer", "ghost_log", "power_stripe", "glitch_timer", "saturation",
-        "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing"
+        "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing",
+        "available_fonts", "console_mode", "verb_label", "verb_slider",
+        "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider"
     )
 
     def get_git_branch(self, path):
@@ -272,6 +274,8 @@ class AuraWindow(QMainWindow):
         self.status_label = QLabel(f"ACTIVE_VOICE // {friendly_name}")
         header.addWidget(self.status_label)
         
+        header.addWidget(self.model_selector) # ⚡ NEW: Direct model switching
+        
         self.visualizer = AudioVisualizer()
         header.addWidget(self.visualizer)
         header.addStretch()
@@ -320,6 +324,7 @@ class AuraWindow(QMainWindow):
 
         # Right Side (Settings Panel)
         self.settings_panel = QWidget()
+        self.settings_panel.setObjectName("settings_panel")
         self.settings_panel.setFixedWidth(450 if getattr(self, 'console_mode', False) else 300)
         self.settings_panel.setVisible(False)
         settings_layout = QVBoxLayout()
@@ -429,6 +434,7 @@ class AuraWindow(QMainWindow):
 
         # Models Panel
         self.models_panel = QWidget()
+        self.models_panel.setObjectName("models_panel")
         self.models_panel.setFixedWidth(450 if getattr(self, 'console_mode', False) else 300)
         self.models_panel.setVisible(False)
         mp_layout = QVBoxLayout()
