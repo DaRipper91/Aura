@@ -11,15 +11,8 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     
-    # Handle Target-specific logic (Xbox / Desktop)
-    target = os.environ.get("AURA_TARGET", "DESKTOP")
-    is_console = "--console" in sys.argv or target == "XBOX"
-    
     window = AuraWindow()
-    if is_console:
-        window.showFullScreen()
-    else:
-        window.show()
+    window.show()
     
     sys.exit(app.exec())
 
