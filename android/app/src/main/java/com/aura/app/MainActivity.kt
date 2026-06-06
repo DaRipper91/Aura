@@ -134,6 +134,7 @@ fun ChatScreen(
     var messages by remember { mutableStateOf(listOf<String>()) }
     var engineMode by remember { mutableStateOf("REMOTE") } // REMOTE, STANDALONE, ADVANCED
     var isDownloading by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     
     val view = LocalView.current
     val context = LocalContext.current
@@ -149,10 +150,11 @@ fun ChatScreen(
         // 🌌 HEADER: Mode Switcher
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
             Text("AURA // ${engineMode}", color = Color(0xFFD4AF37), style = MaterialTheme.typography.labelSmall)
-            Row {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(
                     text = "SW", 
                     color = if (engineMode == "STANDALONE") Color(0xFF8833FF) else Color.Gray,
@@ -212,11 +214,47 @@ fun ChatScreen(
                     }.padding(horizontal = 8.dp),
                     style = MaterialTheme.typography.labelSmall
                 )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                // ⚙️ VOID_SETTINGS Toggle
+                Text(
+                    text = "SETTINGS",
+                    color = if (showSettings) Color(0xFFD4AF37) else Color.Gray,
+                    modifier = Modifier.clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        showSettings = !showSettings
+                    }.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
 
         if (isDownloading) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = Color(0xFFD4AF37))
+        }
+
+        if (showSettings) {
+            // Simple Settings Panel
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(16.dp)
+            ) {
+                Text("VOID_SETTINGS", color = Color(0xFFD4AF37), style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Engine: ${engineMode}", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                Text("Model: Qwen 2.5 1.5B (Quantized)", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                // Add more settings here as needed (Temperature, Context, etc.)
+                Button(
+                    onClick = { showSettings = false },
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.End),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                ) {
+                    Text("CLOSE", color = Color(0xFFD4AF37))
+                }
+            }
         }
 
         LazyColumn(
