@@ -76,7 +76,7 @@ class AutoResizingTextEdit(QTextEdit):
         self.setFixedHeight(min(self.maximumHeight(), max(self.minimumHeight(), new_height)))
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return and not event.modifiers() & Qt.ShiftModifier:
+        if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not event.modifiers() & Qt.ShiftModifier:
             self.returnPressed.emit()
         else:
             super().keyPressEvent(event)
@@ -494,7 +494,8 @@ class AuraWindow(QMainWindow):
             new_model = self.model_mapping[text]
             if self.model != new_model:
                 self.model = new_model
-                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {text}</i></p>")
+                self.engine.clear_history()
+                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {text} (Context Cleared)</i></p>")
 
     def toggle_models(self):
         if self.models_toggle.isChecked():
@@ -520,6 +521,7 @@ class AuraWindow(QMainWindow):
         
         target = items[0].text().split(" ")[0] # extract just the name
         self.model = target
+        self.engine.clear_history()
         
         # Add to header dropdown if it's new
         found_in_header = False
@@ -536,7 +538,7 @@ class AuraWindow(QMainWindow):
         self._sync_model_selector()
         
         friendly_name = OllamaClient.MODELS.get(target, {"name": f"[RAW] {target}"})["name"]
-        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
+        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
 
     def pull_model(self):
         model_name = self.pull_input.text().strip()
@@ -596,7 +598,7 @@ class AuraWindow(QMainWindow):
             self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Workspace updated: {safe_new_dir}</i></p>")
 
     def process_input(self):
-        text = self.input_field.text().strip()
+        text = self.input_field.toPlainText().strip()
         if not text: return
         
         # 1. Navigation Handling (cd command)
@@ -654,9 +656,10 @@ class AuraWindow(QMainWindow):
                 for display_name, m_id in self.model_mapping.items():
                     if target in m_id.lower():
                         self.model = m_id
+                        self.engine.clear_history()
                         self._sync_model_selector()
                         friendly_name = OllamaClient.MODELS.get(m_id, {"name": f"[RAW] {m_id}"})["name"]
-                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
+                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
                         self.input_field.clear()
                         return
                 
@@ -669,9 +672,10 @@ class AuraWindow(QMainWindow):
                 target_model = alias_map[cmd]
                 if target_model in self.models:
                     self.model = target_model
+                    self.engine.clear_history()
                     self._sync_model_selector()
                     friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
                     self.input_field.clear()
                     return
 
@@ -679,9 +683,10 @@ class AuraWindow(QMainWindow):
             for key in self.models:
                 if cmd in key.lower():
                     self.model = key
+                    self.engine.clear_history()
                     self._sync_model_selector()
                     friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name}</i></p>")
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
                     found = True
                     break
             
