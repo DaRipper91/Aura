@@ -158,16 +158,23 @@ fun ChatScreen(
                     color = if (engineMode == "STANDALONE") Color(0xFF8833FF) else Color.Gray,
                     modifier = Modifier.clickable { 
                         val modelName = "QWEN_1.5B"
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         if (modelManager.isModelDownloaded(modelName)) {
                             engineMode = "STANDALONE"
                             bridge.setLocalMode(true, modelManager.getModelFile(modelName).absolutePath)
                         } else if (modelManager.isModelInAssets(modelName)) {
                             isDownloading = true // Use same indicator for extraction
-                            modelManager.extractModelFromAssets(modelName) { success ->
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            modelManager.extractModelFromAssets(modelName) { success, error ->
                                 isDownloading = false
                                 if (success) {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                                     engineMode = "STANDALONE"
                                     bridge.setLocalMode(true, modelManager.getModelFile(modelName).absolutePath)
+                                } else {
+                                    view.performHapticFeedback(HapticFeedbackConstants.REJECT)
+                                    android.util.Log.e("AuraUI", "Extraction Error: $error")
+                                    messages = messages + "SYSTEM: Local Engine Error - $error"
                                 }
                             }
                         } else {
@@ -175,8 +182,11 @@ fun ChatScreen(
                             modelManager.downloadModel(modelName) { success ->
                                 isDownloading = false
                                 if (success) {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                                     engineMode = "STANDALONE"
                                     bridge.setLocalMode(true, modelManager.getModelFile(modelName).absolutePath)
+                                } else {
+                                    view.performHapticFeedback(HapticFeedbackConstants.REJECT)
                                 }
                             }
                         }
@@ -187,6 +197,7 @@ fun ChatScreen(
                     text = "RE", 
                     color = if (engineMode == "REMOTE") Color(0xFF8833FF) else Color.Gray,
                     modifier = Modifier.clickable { 
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         engineMode = "REMOTE"
                         bridge.setLocalMode(false)
                     }.padding(horizontal = 8.dp),
@@ -196,6 +207,7 @@ fun ChatScreen(
                     text = "ADV", 
                     color = if (engineMode == "ADVANCED") Color(0xFFD4AF37) else Color.Gray,
                     modifier = Modifier.clickable { 
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         engineMode = "ADVANCED"
                     }.padding(horizontal = 8.dp),
                     style = MaterialTheme.typography.labelSmall

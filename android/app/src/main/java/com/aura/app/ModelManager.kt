@@ -15,6 +15,11 @@ class ModelManager(private val context: Context) {
         "GEMMA_2B" to "https://example.com/models/gemma_2b_cpu_gpu.bin"
     )
 
+    private val expectedHashes = mapOf(
+        "QWEN_1.5B" to "8771564e61c908c2199bcaa28b0ff9c5f55afb2ae73fbe263142a067113968df",
+        "QWEN_1.5B_CI" to "094406159c788591e102f9e42152862a98f1f77395c32988185794770245a491" // Hash from CI build task
+    )
+
     fun getModelFile(modelName: String): File {
         return File(context.getExternalFilesDir(null), "$modelName.bin")
     }
@@ -35,10 +40,10 @@ class ModelManager(private val context: Context) {
      * Extracts a model from the APK assets to internal storage.
      * MediaPipe requires a file path on the filesystem.
      */
-    fun extractModelFromAssets(modelName: String, onComplete: (Boolean) -> Unit) {
+    fun extractModelFromAssets(modelName: String, onComplete: (Boolean, String?) -> Unit) {
         val targetFile = getModelFile(modelName)
         if (targetFile.exists()) {
-            onComplete(true)
+            onComplete(true, null)
             return
         }
 
@@ -57,10 +62,22 @@ class ModelManager(private val context: Context) {
                 outputStream.flush()
                 outputStream.close()
                 inputStream.close()
-                onComplete(true)
+
+                // Verify Integrity
+                val actualHash = SecurityHelper.calculateHash(targetFile)
+                val isValid = expectedHashes.values.contains(actualHash)
+                
+                if (!isValid) {
+                    android.util.Log.e("AuraModel", "Integrity Check Failed for $modelName. Actual: $actualHash")
+                    targetFile.delete()
+                    onComplete(false, "Integrity Check Failed: $actualHash")
+                    return@Thread
+                }
+
+                onComplete(true, null)
             } catch (e: Exception) {
                 android.util.Log.e("AuraModel", "Asset Extraction Failed: ${e.message}")
-                onComplete(false)
+                onComplete(false, e.message)
             }
         }.start()
     }
