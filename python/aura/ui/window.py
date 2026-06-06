@@ -58,6 +58,29 @@ class ChatWorker(QThread):
         
         self.finished.emit()
 
+class AutoResizingTextEdit(QTextEdit):
+    returnPressed = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.textChanged.connect(self.adjust_height)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setMinimumHeight(45)
+        self.setMaximumHeight(200)
+
+    def adjust_height(self):
+        doc_height = int(self.document().size().height())
+        margins = self.contentsMargins()
+        new_height = doc_height + margins.top() + margins.bottom() + 10 # padding
+        self.setFixedHeight(min(self.maximumHeight(), max(self.minimumHeight(), new_height)))
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return and not event.modifiers() & Qt.ShiftModifier:
+            self.returnPressed.emit()
+        else:
+            super().keyPressEvent(event)
+
 @aura_component
 class AuraWindow(QMainWindow):
     __slots__ = (
@@ -67,7 +90,8 @@ class AuraWindow(QMainWindow):
         "top_p_slider", "ctx_label", "ctx_slider", "font_combo",
         "font_size_slider", "dir_label", "dir_btn", "messages",
         "pending_message", "current_response_text", "worker", "workspace_label",
-        "model_selector", "model_mapping", "discover_btn"
+        "model_selector", "model_mapping", "discover_btn", "models_toggle",
+        "models_panel", "models_list", "pull_input", "pull_btn", "pull_worker"
     )
 
     def get_git_branch(self, path):
@@ -138,76 +162,84 @@ class AuraWindow(QMainWindow):
         self.model_selector.currentTextChanged.connect(self.change_model_from_selector)
         
         self.setStyleSheet("""
-            QMainWindow { background-color: #080808; }
+            QMainWindow { background-color: #0d0d1a; }
             QTextEdit { 
-                background-color: #080808; 
+                background-color: transparent; 
                 color: #B0B0B0; 
                 border: none;
-                selection-background-color: #2D1B4E;
+                selection-background-color: rgba(0, 128, 128, 0.4);
             }
             /* Markdown Styling */
-            pre { background-color: #121212; padding: 10px; border-radius: 4px; color: #A0A0A0; }
-            code { color: #FF79C6; }
-            h1, h2, h3 { color: #8833FF; }
-            a { color: #D4AF37; }
+            pre { background-color: rgba(128, 0, 128, 0.1); padding: 10px; border-radius: 4px; color: #E0E0E0; border: 1px solid rgba(0, 128, 128, 0.3); }
+            code { color: #00e6e6; }
+            h1, h2, h3 { color: #00e6e6; }
+            a { color: #8833FF; }
             
-            QLineEdit {
-                background-color: #0F0F0F;
+            AutoResizingTextEdit {
+                background-color: rgba(128, 0, 128, 0.1);
                 color: #E0E0E0;
-                border: 1px solid #1A1A1A;
-                padding: 14px;
-                border-radius: 2px;
+                border: 1px solid rgba(0, 128, 128, 0.5);
+                padding: 10px;
+                border-radius: 6px;
             }
-            QLineEdit:focus {
-                border: 1px solid #8833FF;
-                background-color: #121212;
+            AutoResizingTextEdit:focus {
+                border: 1px solid #00e6e6;
+                background-color: rgba(128, 0, 128, 0.2);
             }
             QLabel {
-                color: #404040;
+                color: #00cccc;
                 font-family: 'Monospace';
                 font-size: 11px;
                 text-transform: uppercase;
                 letter-spacing: 2px;
             }
             QGroupBox {
-                border: 1px solid #1A1A1A;
+                border: 1px solid rgba(0, 128, 128, 0.3);
                 margin-top: 10px;
                 padding-top: 10px;
-                color: #D4AF37;
+                color: #00e6e6;
                 font-family: 'Monospace';
                 font-size: 10px;
             }
             QSlider::handle:horizontal {
-                background: #8833FF;
+                background: #00e6e6;
                 width: 12px;
                 border-radius: 6px;
             }
             QPushButton {
-                background-color: #0F0F0F;
-                color: #404040;
-                border: 1px solid #1A1A1A;
+                background-color: rgba(128, 0, 128, 0.1);
+                color: #00e6e6;
+                border: 1px solid rgba(0, 128, 128, 0.5);
                 padding: 8px 12px;
                 font-family: 'Monospace';
                 font-size: 10px;
+                border-radius: 4px;
             }
             QPushButton:hover {
-                color: #D4AF37;
-                border-color: #2D1B4E;
+                color: #ffffff;
+                border-color: #00e6e6;
+                background-color: rgba(128, 0, 128, 0.3);
             }
             QPushButton:focus {
-                border: 1px solid #8833FF;
+                border: 1px solid #00e6e6;
                 color: #E0E0E0;
             }
             QComboBox {
-                background-color: #0F0F0F;
+                background-color: rgba(128, 0, 128, 0.1);
                 color: #E0E0E0;
-                border: 1px solid #1A1A1A;
+                border: 1px solid rgba(0, 128, 128, 0.5);
                 padding: 5px;
                 font-family: 'Monospace';
                 font-size: 10px;
             }
             QComboBox:focus {
-                border: 1px solid #8833FF;
+                border: 1px solid #00e6e6;
+            }
+            QLineEdit {
+                background-color: rgba(128, 0, 128, 0.1);
+                color: #E0E0E0;
+                border: 1px solid rgba(0, 128, 128, 0.5);
+                padding: 5px;
             }
         """)
 
@@ -241,7 +273,7 @@ class AuraWindow(QMainWindow):
         self.output_area.setPlaceholderText("THE AURA IS SILENT...")
         chat_container.addWidget(self.output_area)
 
-        self.input_field = QLineEdit()
+        self.input_field = AutoResizingTextEdit()
         self.input_field.setPlaceholderText("DESCRIBE THE VOID...")
         self.input_field.returnPressed.connect(self.process_input)
         chat_container.addWidget(self.input_field)
