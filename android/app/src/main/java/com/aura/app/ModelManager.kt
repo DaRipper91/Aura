@@ -64,7 +64,7 @@ class ModelManager(private val context: Context) {
                 inputStream.close()
 
                 // Verify Integrity
-                val actualHash = SecurityHelper.calculateHash(targetFile)
+                val actualHash = SecurityHelper.calculateSHA256(targetFile)
                 val isValid = expectedHashes.values.contains(actualHash)
                 
                 if (!isValid) {
