@@ -36,10 +36,11 @@ jobs:
         with:
           gradle-version: 8.2.1
 
-      - name: Bundle Model into Assets
+      - name: Bundle Models into Assets
         run: |
           mkdir -p android/app/src/main/assets/models
           curl -L "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_seq128_q8_ekv1280.task" -o "android/app/src/main/assets/models/QWEN_1.5B.bin"
+          curl -L "https://huggingface.co/google/phi-3-mini-4k-instruct-tflite/resolve/main/phi-3-mini-4k-instruct.bin" -o "android/app/src/main/assets/models/PHI3_MINI.bin"
 
       - name: Build Debug APK with Chaquopy
         run: gradle assembleDebug

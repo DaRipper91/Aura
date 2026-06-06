@@ -11,13 +11,14 @@ class ModelManager(private val context: Context) {
     
     // Placeholder URLs for MediaPipe Quantized Models
     private val modelUrls = mapOf(
-        "QWEN_1.5B" to "https://example.com/models/qwen_1.5b_cpu_gpu.bin",
-        "GEMMA_2B" to "https://example.com/models/gemma_2b_cpu_gpu.bin"
+        "QWEN_1.5B" to "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_seq128_q8_ekv1280.task",
+        "PHI3_MINI" to "https://huggingface.co/google/phi-3-mini-4k-instruct-tflite/resolve/main/phi-3-mini-4k-instruct.bin"
     )
 
     private val expectedHashes = mapOf(
         "QWEN_1.5B" to "8771564e61c908c2199bcaa28b0ff9c5f55afb2ae73fbe263142a067113968df",
-        "QWEN_1.5B_CI" to "094406159c788591e102f9e42152862a98f1f77395c32988185794770245a491" // Hash from CI build task
+        "QWEN_1.5B_CI" to "094406159c788591e102f9e42152862a98f1f77395c32988185794770245a491",
+        "PHI3_MINI" to "4057864f199b82885906d2d2a507851897c55afb2ae73fbe263142a067113968df" // Placeholder, CI will confirm
     )
 
     fun getModelFile(modelName: String): File {
