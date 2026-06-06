@@ -34,7 +34,9 @@ class GhostLogArea(QTextEdit):
 
     def log(self, message: str):
         timestamp = time.strftime("%H:%M:%S")
-        self.append(f"[{timestamp}] {message}")
+        safe_msg = html.escape(message)
+        safe_time = html.escape(timestamp)
+        self.append(f"<span style='white-space: pre-wrap;'>[{safe_time}] {safe_msg}</span>")
         self.moveCursor(self.textCursor().MoveOperation.End)
 
 class PowerStripe(QFrame):
@@ -656,8 +658,10 @@ class AuraWindow(QMainWindow):
                 name = m.get("name", "Unknown")
                 size = m.get("size", 0) / (1024**3)
                 status = "[TUNED]" if name in OllamaClient.MODELS else "[RAW]"
-                self.output_area.append(f"<p style='color: #B0B0B0; font-family: Monospace;'>• <b>{name}</b> ({size:.1f} GB) <span style='color: #404040;'>{status}</span></p>")
-        self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>USE /model <name> TO SWITCH OR SELECT FROM HEADER</i></p>")
+                safe_name = html.escape(name)
+                safe_status = html.escape(status)
+                self.output_area.append(f"<p style='color: #B0B0B0; font-family: Monospace;'>• <b>{safe_name}</b> ({size:.1f} GB) <span style='color: #404040;'>{safe_status}</span></p>")
+        self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>USE /model &lt;name&gt; TO SWITCH OR SELECT FROM HEADER</i></p>")
 
     def toggle_settings(self):
         if self.settings_toggle.isChecked():
@@ -680,7 +684,8 @@ class AuraWindow(QMainWindow):
                 self.model = new_model
                 self.engine.clear_history()
                 self.trigger_glitch()
-                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {text} (Context Cleared)</i></p>")
+                safe_text = html.escape(text)
+                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_text} (Context Cleared)</i></p>")
 
     def toggle_models(self):
         if self.models_toggle.isChecked():
@@ -724,14 +729,16 @@ class AuraWindow(QMainWindow):
         self._sync_model_selector()
         
         friendly_name = OllamaClient.MODELS.get(target, {"name": f"[RAW] {target}"})["name"]
-        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
+        safe_friendly_name = html.escape(friendly_name)
+        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
 
     def pull_model(self):
         model_name = self.pull_input.text().strip()
         if not model_name: return
         self.pull_btn.setEnabled(False)
         self.pull_btn.setText("PULLING...")
-        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Pulling {model_name} from Ollama...</i></p>")
+        safe_name = html.escape(model_name)
+        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Pulling {safe_name} from Ollama...</i></p>")
         self.ghost_log.log(f"API_REQUEST: PULL_MODEL ({model_name})")
         
         self.pull_worker = PullWorker(model_name)
@@ -809,7 +816,8 @@ class AuraWindow(QMainWindow):
                 self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Context shifted to: {safe_path}</i></p>")
                 self.trigger_glitch()
             else:
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ERROR: Directory not found: {target}</i></p>")
+                safe_target = html.escape(target)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ERROR: Directory not found: {safe_target}</i></p>")
             
             self.input_field.clear()
             return
@@ -833,7 +841,9 @@ class AuraWindow(QMainWindow):
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // TUNED VOICES:</i></p>")
                 for alias, m_id in alias_map.items():
                     if m_id in OllamaClient.MODELS:
-                        self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{alias}</b> - {OllamaClient.MODELS[m_id]['name']}</p>")
+                        safe_model_name = html.escape(OllamaClient.MODELS[m_id]['name'])
+                        safe_alias = html.escape(alias)
+                        self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{safe_alias}</b> - {safe_model_name}</p>")
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>TYPE /MODELS TO SCAN LOCAL SYSTEM</i></p>")
                 self.input_field.clear()
                 return
@@ -851,7 +861,8 @@ class AuraWindow(QMainWindow):
                         self.engine.clear_history()
                         self._sync_model_selector()
                         friendly_name = OllamaClient.MODELS.get(m_id, {"name": f"[RAW] {m_id}"})["name"]
-                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
+                        safe_friendly_name = html.escape(friendly_name)
+                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
                         self.input_field.clear()
                         return
                 
@@ -867,7 +878,8 @@ class AuraWindow(QMainWindow):
                     self.engine.clear_history()
                     self._sync_model_selector()
                     friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
+                    safe_friendly_name = html.escape(friendly_name)
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
                     self.input_field.clear()
                     return
 
@@ -878,7 +890,8 @@ class AuraWindow(QMainWindow):
                     self.engine.clear_history()
                     self._sync_model_selector()
                     friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {friendly_name} (Context Cleared)</i></p>")
+                    safe_friendly_name = html.escape(friendly_name)
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
                     found = True
                     break
             
@@ -1020,7 +1033,8 @@ class AuraWindow(QMainWindow):
                 stripe_style = f"border-left: {stripe_width}px solid {role_color};"
                 
                 html_content += f"<div style='{glow_style} {stripe_style} margin-right: 50px;'>"
-                html_content += f"<div style='color: #00e6e6; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
+                safe_model_role = html.escape(msg['model'].upper())
+                html_content += f"<div style='color: #00e6e6; font-size: 13px; letter-spacing: 1px;'><b>{safe_model_role}</b></div>"
                 html_content += f"<div style='color: #B0B0B0;'>{content_html}</div></div><br>"
         
         self.output_area.setHtml(html_content)
