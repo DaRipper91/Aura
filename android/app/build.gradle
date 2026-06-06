@@ -8,6 +8,15 @@ android {
     namespace 'com.aura.app'
     compileSdk 34
 
+    // ⚡ ASAHI ARM64 FIX: Use system aapt2 to avoid x86_64 crashes
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'com.android.tools.build' && details.requested.name == 'aapt2') {
+                details.useTarget("com.android.tools.build:aapt2:8.2.2-10154401") 
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.aura.app"
         minSdk 24
