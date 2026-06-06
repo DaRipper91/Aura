@@ -141,10 +141,20 @@ class AuraWindow(QMainWindow):
         
         # Initialize Engine
         self.engine = OllamaClient()
-        self.models = [m['name'] for m in self.engine.get_available_models()]
-        if not self.models:
-            self.models = ["qwen2.5:7b"]
-        self.model = self.models[0]
+        available_tags = [m['name'] for m in self.engine.get_available_models()]
+        
+        # ⚡ ASAHI OPTIMIZATION: Prioritize Phi-3 Mini as default (Low RAM footprint)
+        priority_models = ["phi3:mini", "qwen2.5:7b", "gemma2:2b"]
+        self.model = None
+        for p in priority_models:
+            if p in available_tags:
+                self.model = p
+                break
+        
+        if not self.model:
+            self.model = available_tags[0] if available_tags else "phi3:mini"
+        
+        self.models = available_tags if available_tags else [self.model]
         
         # Generation Options
         self.gen_options = {

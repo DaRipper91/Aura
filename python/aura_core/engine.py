@@ -14,20 +14,20 @@ class OllamaClient:
     __slots__ = ("base_url", "project_root", "history", "current_model", "last_context")
 
     MODELS = {
-        "phi3:mini": {"name": "Phi-3 Mini (Reasoning)"},
+        "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},
         "gemma2:2b": {"name": "Gemma 2 2B (Creative)"},
         "qwen2.5-coder:1.5b": {"name": "Qwen 2.5 Coder (Coding)"},
         "qwen2.5:7b": {"name": "Qwen 2.5 7B (Power)"},
         "deepseek-r1:8b": {"name": "DeepSeek R1 8B (Logic)"},
         "moondream": {"name": "Moondream 2 (Vision)"},
-        "samantha-mistral": {"name": "Samantha (Philosophical)"}
+        "samantha-mistral": {"name": "Samantha (Heavy/Philosophical)"}
     }
 
     def __init__(self, base_url: str = "http://localhost:11434"):
         self.base_url = base_url
         self.project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
-        self.current_model = "qwen2.5:7b"
+        self.current_model = "phi3:mini"
         self.last_context = None
         self.check_mandates()
 
