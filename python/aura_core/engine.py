@@ -80,6 +80,18 @@ class OllamaClient:
             "Be resilient to casual or colorful language. Maintain a highly-capable and direct demeanor."
         )
         
+        # ⚡ SHUT UP AND COMPUTE (Verbosity < 0.1)
+        if self.verbosity < 0.1:
+            return (
+                f"{base_identity}\n\n"
+                "CRITICAL: SHUT UP AND COMPUTE MODE ACTIVE.\n"
+                "1. Provide DIRECT answers only.\n"
+                "2. NO conversational filler (e.g., 'Sure', 'I can help with that').\n"
+                "3. NO explanations unless explicitly asked for 'WHY'.\n"
+                "4. If providing code, output ONLY the code blocks.\n"
+                "5. Minimize token usage. Be the silent professional."
+            )
+
         # Verbosity-aware identity
         style = "Be extremely concise. Use bullet points." if self.verbosity < 0.3 else \
                 "Be thorough and explanatory." if self.verbosity > 0.7 else \

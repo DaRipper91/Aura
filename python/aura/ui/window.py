@@ -126,14 +126,21 @@ class ChatWorker(QThread):
         self.prompt = prompt
         self.options = options
         self.engine = engine
+        self.is_running = True
+
+    def stop(self):
+        self.is_running = False
 
     def run(self):
         # ⚡ PURE PYTHON: Verfied native stream
         try:
             for chunk in self.engine.stream_chat(self.model, self.prompt, self.options):
+                if not self.is_running:
+                    break
                 self.chunk_received.emit(chunk)
         except Exception as e:
-            self.chunk_received.emit(f"\n[Aura Error: {str(e)}]")
+            if self.is_running:
+                self.chunk_received.emit(f"\n[Aura Error: {str(e)}]")
         
         self.finished.emit()
 
@@ -271,6 +278,12 @@ class AuraWindow(QMainWindow):
         self.visualizer = AudioVisualizer()
         header.addWidget(self.visualizer)
         header.addStretch()
+
+        self.abort_btn = QPushButton("ABORT")
+        self.abort_btn.setStyleSheet("color: #FF5555; font-weight: bold; border: 1px solid #FF5555; padding: 2px 10px;")
+        self.abort_btn.clicked.connect(self.abort_generation)
+        self.abort_btn.setVisible(False)
+        header.addWidget(self.abort_btn)
         
         self.models_toggle = QPushButton("MODELS")
         self.models_toggle.setCheckable(True)
@@ -765,18 +778,25 @@ class AuraWindow(QMainWindow):
             self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Workspace updated: {safe_new_dir}</i></p>")
             self.trigger_glitch()
 
+    def abort_generation(self):
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            self.worker.stop()
+            self.ghost_log.log("SYSTEM_ACTION: ABORT_GENERATION_SIGNAL_SENT")
+            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ABORTED BY USER</i></p>")
+            self.abort_btn.setVisible(False)
+
     def process_input(self):
         text = self.input_field.toPlainText().strip()
         if not text: return
-        
+
         # 1. Navigation Handling (cd command)
         if text.startswith("cd "):
             target = text[3:].strip()
             if target == "~":
                 target = os.path.expanduser("~")
-            
+
             new_path = os.path.normpath(os.path.join(self.engine.project_root, target))
-            
+
             if os.path.isdir(new_path):
                 self.engine.project_root = new_path
                 # Update UI elements representing directory
@@ -790,14 +810,20 @@ class AuraWindow(QMainWindow):
             else:
                 safe_target = html.escape(target)
                 self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ERROR: Directory not found: {safe_target}</i></p>")
-            
+
             self.input_field.clear()
             return
 
         if text.startswith("/"):
             cmd = text[1:].lower()
-            
+
+            if cmd == "stop" or cmd == "abort":
+                self.abort_generation()
+                self.input_field.clear()
+                return
+
             alias_map = {
+
                 "phi": "phi3:mini",
                 "gemma": "gemma2:2b",
                 "qwen": "qwen2.5:7b",
@@ -881,6 +907,7 @@ class AuraWindow(QMainWindow):
         
         self.input_field.clear()
         self.input_field.setEnabled(False)
+        self.abort_btn.setVisible(True)
         self.visualizer.start()
         self.ghost_log.log(f"API_STREAM_START: MODEL({self.model})")
 
@@ -903,6 +930,7 @@ class AuraWindow(QMainWindow):
 
     def handle_finished(self):
         self.visualizer.stop()
+        self.abort_btn.setVisible(False)
         self.ghost_log.log("API_STREAM_END: OK")
         if self.pending_message:
             # Check for Tool Use (WRITE_FILE)
