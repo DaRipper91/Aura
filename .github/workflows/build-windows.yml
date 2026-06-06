@@ -30,7 +30,8 @@ jobs:
         # --onefile: Bundle everything into a single EXE
         # --windowed: No console window
         # --icon: Use the icon if available
-        pyinstaller --onefile --windowed --name Aura_v1.0.5_Lite main.py
+        # --paths: Add the python directory so PyInstaller can find the modules
+        pyinstaller --onefile --windowed --paths python --name Aura_v1.0.5_Lite main.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
