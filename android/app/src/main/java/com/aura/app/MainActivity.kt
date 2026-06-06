@@ -157,16 +157,28 @@ fun ChatScreen(
                     text = "SW", 
                     color = if (engineMode == "STANDALONE") Color(0xFF8833FF) else Color.Gray,
                     modifier = Modifier.clickable { 
-                        if (!modelManager.isModelDownloaded("QWEN_1.5B")) {
-                            isDownloading = true
-                            modelManager.downloadModel("QWEN_1.5B") {
+                        val modelName = "QWEN_1.5B"
+                        if (modelManager.isModelDownloaded(modelName)) {
+                            engineMode = "STANDALONE"
+                            bridge.setLocalMode(true, modelManager.getModelFile(modelName).absolutePath)
+                        } else if (modelManager.isModelInAssets(modelName)) {
+                            isDownloading = true // Use same indicator for extraction
+                            modelManager.extractModelFromAssets(modelName) { success ->
                                 isDownloading = false
-                                bridge.setLocalMode(true, modelManager.getModelFile("QWEN_1.5B").absolutePath)
-                                engineMode = "STANDALONE"
+                                if (success) {
+                                    engineMode = "STANDALONE"
+                                    bridge.setLocalMode(true, modelManager.getModelFile(modelName).absolutePath)
+                                }
                             }
                         } else {
-                            engineMode = "STANDALONE"
-                            bridge.setLocalMode(true, modelManager.getModelFile("QWEN_1.5B").absolutePath)
+                            isDownloading = true
+                            modelManager.downloadModel(modelName) { success ->
+                                isDownloading = false
+                                if (success) {
+                                    engineMode = "STANDALONE"
+                                    bridge.setLocalMode(true, modelManager.getModelFile(modelName).absolutePath)
+                                }
+                            }
                         }
                     }.padding(horizontal = 8.dp),
                     style = MaterialTheme.typography.labelSmall
