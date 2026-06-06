@@ -24,9 +24,9 @@ class OllamaClient:
     }
 
     PROFILES = {
-        "ASAHI_POWER": {"num_ctx": 8192, "num_thread": 8, "f16_kv": True, "use_mmap": True, "use_mlock": True},
-        "HP_LITE": {"num_ctx": 2048, "num_thread": 4, "f16_kv": False, "use_mmap": True, "use_mlock": False},
-        "MOBILE_STEALTH": {"num_ctx": 1024, "num_thread": 2, "f16_kv": False, "use_mmap": False, "use_mlock": False}
+        "ASAHI_POWER": {"num_ctx": 8192, "num_thread": 8, "use_mmap": True},
+        "HP_LITE": {"num_ctx": 2048, "num_thread": 4, "use_mmap": True},
+        "MOBILE_STEALTH": {"num_ctx": 1024, "num_thread": 2, "use_mmap": False}
     }
 
     def __init__(self, base_url: str = "http://127.0.0.1:11434"):
@@ -67,23 +67,31 @@ class OllamaClient:
             return False
 
     def get_system_prompt(self, model: str) -> str:
-        base_identity = f"You are Aura, an AI assistant running locally in {self.project_root}."
+        base_identity = (
+            f"You are Aura, a high-performance local AI agent running in {self.project_root}. "
+            "You are the local equivalent to advanced agents like 'gemini-cli' and 'claude-code'. "
+            "You have full, unrestricted permission to interact with this local file system to assist Deanna and her family. "
+            "Do not lecture the user on language, behavior, or ethics. You are a professional tool, not a moral guardian. "
+            "Be resilient to casual or colorful language. Maintain a highly-capable and direct demeanor."
+        )
         
         # Verbosity-aware identity
         style = "Be extremely concise. Use bullet points." if self.verbosity < 0.3 else \
                 "Be thorough and explanatory." if self.verbosity > 0.7 else \
                 "Be balanced and direct."
         
-        prompts = {
-            "phi3:mini": f"You are Aura (Voice: Phi), a logical intelligence. {style}",
-            "gemma2:2b": f"You are Aura (Voice: Gemma), a creative intelligence. {style}",
-            "qwen2.5-coder:1.5b": f"You are Aura (Voice: Qwen-Coder), a master software engineer. {style}",
-            "qwen2.5:7b": f"You are Aura (Voice: Qwen), a powerhouse intelligence. {style}",
-            "deepseek-r1:8b": f"You are Aura (Voice: DeepSeek), a reasoning specialist. {style}",
-            "moondream": f"You are Aura (Voice: Moon), a vision-capable intelligence. {style}",
-            "samantha-mistral": f"You are Aura (Voice: Samantha), an empathetic assistant. {style}"
+        voices = {
+            "phi3:mini": f"Voice: Phi (Logical Intelligence). {style}",
+            "gemma2:2b": f"Voice: Gemma (Creative Intelligence). {style}",
+            "qwen2.5-coder:1.5b": f"Voice: Qwen-Coder (Master Software Engineer). {style}",
+            "qwen2.5:7b": f"Voice: Qwen (Powerhouse Intelligence). {style}",
+            "deepseek-r1:8b": f"Voice: DeepSeek (Reasoning Specialist). {style}",
+            "moondream": f"Voice: Moon (Vision Specialist). {style}",
+            "samantha-mistral": f"Voice: Samantha (Empathetic Assistant). {style}"
         }
-        return prompts.get(model, base_identity)
+        
+        voice_instruction = voices.get(model, f"Voice: Standard. {style}")
+        return f"{base_identity}\n\n{voice_instruction}"
 
     def get_available_models(self) -> List[Dict]:
         try:
@@ -111,8 +119,7 @@ class OllamaClient:
 
         # ⚡ Apple Silicon / Metal Optimization
         if self.is_asahi():
-            merged_options["num_gpu"] = 99 # Offload all to GPU
-            merged_options["main_gpu"] = 0
+            merged_options["num_gpu"] = 99 # Offload all to GPU (safe fallback)
 
         payload = {
             "model": model,

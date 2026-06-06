@@ -1006,9 +1006,8 @@ class AuraWindow(QMainWindow):
                 content = msg['content']
                 if is_pending:
                     # ⚡ HOLOGRAPHIC BRACKETS: Only during stream
-                    content = f"<span style='color: #00e6e6;'>[</span> {content} <span style='color: #00e6e6;'>]</span>"
-                    safe_content = html.escape(content)
-                    content_html = f"<pre style='white-space: pre-wrap; font-family: inherit;'>{safe_content}</pre>"
+                    safe_inner = html.escape(content)
+                    content_html = f"<pre style='white-space: pre-wrap; font-family: inherit;'><span style='color: #00e6e6;'>[</span> {safe_inner} <span style='color: #00e6e6;'>]</span></pre>"
                 else:
                     content_html = msg.get("_rendered_html")
                     if content_html is None:
