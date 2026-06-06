@@ -561,6 +561,11 @@ class AuraWindow(QMainWindow):
                 border-color: #00e6e6;
                 background-color: rgba(128, 0, 128, 0.3);
             }}
+            QPushButton:focus {{
+                border-color: #00e6e6;
+                outline: none;
+                background-color: rgba(128, 0, 128, 0.2);
+            }}
         """)
 
     def update_telemetry(self):
