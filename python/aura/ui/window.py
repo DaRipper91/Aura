@@ -927,8 +927,64 @@ class AuraWindow(QMainWindow):
         self.input_field.setFocus()
 
     def handle_tool_use(self, content: str):
-        # ... (same as before)
-        pass
+        try:
+            # Simple parser for the model's command
+            parts = content.split("WRITE_FILE:")[1].split("CONTENT:")
+            path = parts[0].strip()
+            file_content = parts[1].split("EOF")[0].strip()
+            
+            # Security: Prevent path traversal
+            if os.path.isabs(path) or ".." in path:
+                safe_path = html.escape(path)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path traversal detected: {safe_path}</i></p>")
+                return
+
+            full_path = os.path.normpath(os.path.join(self.engine.project_root, path))
+            
+            # Security: Ensure path is within project root
+            if not full_path.startswith(os.path.normpath(self.engine.project_root)):
+                safe_path = html.escape(path)
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path outside workspace: {safe_path}</i></p>")
+                return
+
+            from PySide6.QtWidgets import QMessageBox
+            reply = QMessageBox.question(self, "AURA // TOOL_USE", 
+                                       f"QWEN requests to modify: {path}\n\nProceed with changes?",
+                                       QMessageBox.Yes | QMessageBox.No)
+            
+            if reply == QMessageBox.Yes:
+                os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                with open(full_path, "w") as f:
+                    f.write(file_content)
+                safe_path = html.escape(path)
+                self.output_area.append(f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // FILE_WRITTEN: {safe_path}</i></p>")
+            else:
+                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // FILE_WRITE_CANCELLED</i></p>")
+        except Exception as e:
+            safe_e = html.escape(str(e))
+            self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_ERROR: {safe_e}</i></p>")
+
+    # --- MANDATE COMPLIANCE ---
+
+    def apply_theme(self):
+        """Palette Mandate: Ensure aesthetic integrity."""
+        self.update_stylesheet()
+        self.ghost_log.log("PALETTE_SYNC: OK")
+
+    def scan_integrity(self) -> bool:
+        """Sentinel Mandate: Security and connection check."""
+        try:
+            import requests
+            requests.get(self.engine.base_url, timeout=1)
+            self.ghost_log.log("SENTINEL_SCAN: OLLAMA_UP")
+            return True
+        except:
+            self.ghost_log.log("SENTINEL_SCAN: OLLAMA_DOWN")
+            return False
+
+    def stream_chat(self, model: str, prompt: str, options: Optional[dict] = None):
+        """Bolt Mandate: High-performance orchestration proxy."""
+        return self.engine.stream_chat(model, prompt, options)
 
     def render_messages(self):
         self.output_area.clear()

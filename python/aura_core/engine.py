@@ -52,6 +52,20 @@ class OllamaClient:
         if profile_name in self.PROFILES:
             self.active_profile = profile_name
 
+    # --- MANDATE COMPLIANCE ---
+
+    def apply_theme(self):
+        """Palette Mandate: Engine settings sync."""
+        pass # Engine is headless, but protocol requires it
+
+    def scan_integrity(self) -> bool:
+        """Sentinel Mandate: Backend health check."""
+        try:
+            requests.get(f"{self.base_url}/api/tags", timeout=1)
+            return True
+        except:
+            return False
+
     def get_system_prompt(self, model: str) -> str:
         base_identity = f"You are Aura, an AI assistant running locally in {self.project_root}."
         
