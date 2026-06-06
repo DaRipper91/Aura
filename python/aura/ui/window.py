@@ -172,7 +172,8 @@ class AuraWindow(QMainWindow):
         "visualizer", "ghost_log", "power_stripe", "glitch_timer", "saturation",
         "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing",
         "available_fonts", "console_mode", "verb_label", "verb_slider",
-        "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider"
+        "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider",
+        "last_render_time"
     )
 
     def get_git_branch(self, path):
@@ -253,6 +254,7 @@ class AuraWindow(QMainWindow):
         self.messages = []
         self.pending_message = None
         self.current_response_text = ""
+        self.last_render_time = 0.0
 
         # Model Management
         self.model_mapping = {v['name']: k for k, v in OllamaClient.MODELS.items()}
@@ -908,7 +910,13 @@ class AuraWindow(QMainWindow):
         self.current_response_text += chunk
         if self.pending_message:
             self.pending_message["content"] = self.current_response_text
-        self.render_messages()
+
+        # ⚡ BOLT OPTIMIZATION: Throttle render updates to ~30 FPS (33ms)
+        # This prevents O(N*M) layout thrashing in QTextEdit during fast LLM streams
+        current_time = time.time()
+        if current_time - self.last_render_time >= 0.033:
+            self.render_messages()
+            self.last_render_time = current_time
 
     def handle_finished(self):
         self.visualizer.stop()
@@ -988,19 +996,26 @@ class AuraWindow(QMainWindow):
 
     def render_messages(self):
         self.output_area.clear()
-        html_content = ""
+        html_parts = []
         
         display_messages = self.messages.copy()
         if self.pending_message:
             display_messages.append(self.pending_message)
             
         for msg in display_messages:
+            # ⚡ BOLT OPTIMIZATION: Cache full HTML block for past messages
+            # Reduces redundant string formatting and escaping inside the loop
+            if "_full_html" in msg:
+                html_parts.append(msg["_full_html"])
+                continue
+
             role_color = "#6633FF" if msg["role"] == "user" else "#00e6e6"
             glow_style = f"border: 1px solid {role_color}; padding: 15px; border-radius: 8px; background-color: rgba(0, 0, 0, 0.4);"
             
+            msg_html = ""
             if msg["role"] == "user":
                 safe_content = html.escape(msg['content'])
-                html_content += f"<div style='{glow_style} margin-left: 50px;'><span style='color: #6633FF;'><b>&gt;</b></span> <span style='color: #FFFFFF;'>{safe_content}</span></div><br>"
+                msg_html = f"<div style='{glow_style} margin-left: 50px;'><span style='color: #6633FF;'><b>&gt;</b></span> <span style='color: #FFFFFF;'>{safe_content}</span></div><br>"
             else:
                 is_pending = (self.pending_message and msg == self.pending_message)
                 content = msg['content']
@@ -1019,9 +1034,14 @@ class AuraWindow(QMainWindow):
                 stripe_width = min(20, len(content) // 10)
                 stripe_style = f"border-left: {stripe_width}px solid {role_color};"
                 
-                html_content += f"<div style='{glow_style} {stripe_style} margin-right: 50px;'>"
-                html_content += f"<div style='color: #00e6e6; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
-                html_content += f"<div style='color: #B0B0B0;'>{content_html}</div></div><br>"
+                msg_html = f"<div style='{glow_style} {stripe_style} margin-right: 50px;'>"
+                msg_html += f"<div style='color: #00e6e6; font-size: 13px; letter-spacing: 1px;'><b>{msg['model'].upper()}</b></div>"
+                msg_html += f"<div style='color: #B0B0B0;'>{content_html}</div></div><br>"
+
+            html_parts.append(msg_html)
+            # Only cache finalized messages
+            if not (self.pending_message and msg == self.pending_message):
+                msg["_full_html"] = msg_html
         
-        self.output_area.setHtml(html_content)
+        self.output_area.setHtml("".join(html_parts))
         self.output_area.moveCursor(self.output_area.textCursor().MoveOperation.End)
