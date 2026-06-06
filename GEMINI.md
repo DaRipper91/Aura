@@ -14,6 +14,12 @@ To provide a focused, aesthetically-pleasing interface for local models that fee
 - **Models:** Integrated with Ollama (Phi, Gemma, Qwen).
 - **Core Feature:** Streaming "typewriter" effect with markdown support.
 
+## 🎯 Target Devices (Optimized)
+- **Android:** Pixel 10 Pro, Galaxy S25 (MediaPipe Engine).
+- **Windows:** Windows 11 Lite (Single-file .exe).
+- **Xbox:** Series X/S & One S (UWP / Controller-First).
+- **Linux:** CachyOS x86_64 (Native Python/Zig + Ollama).
+
 ---
 
 ---
