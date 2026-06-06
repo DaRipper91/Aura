@@ -15,12 +15,17 @@ class OllamaClient:
 
     MODELS = {
         "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},
+        "phi3:latest": {"name": "Phi-3 Mini (Optimized)"},
         "gemma2:2b": {"name": "Gemma 2 2B (Creative)"},
+        "gemma2:latest": {"name": "Gemma 2 2B (Creative)"},
         "qwen2.5-coder:1.5b": {"name": "Qwen 2.5 Coder (Coding)"},
         "qwen2.5:7b": {"name": "Qwen 2.5 7B (Power)"},
+        "qwen2.5:latest": {"name": "Qwen 2.5 7B (Power)"},
         "deepseek-r1:8b": {"name": "DeepSeek R1 8B (Logic)"},
         "moondream": {"name": "Moondream 2 (Vision)"},
-        "samantha-mistral": {"name": "Samantha (Heavy/Philosophical)"}
+        "moondream:latest": {"name": "Moondream 2 (Vision)"},
+        "samantha-mistral": {"name": "Samantha (Heavy/Philosophical)"},
+        "samantha-mistral:latest": {"name": "Samantha (Heavy/Philosophical)"}
     }
 
     PROFILES = {

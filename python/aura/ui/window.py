@@ -173,7 +173,7 @@ class AuraWindow(QMainWindow):
         "models_panel", "models_list", "pull_input", "pull_btn", "pull_worker",
         "visualizer", "ghost_log", "power_stripe", "glitch_timer", "saturation",
         "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing",
-        "available_fonts", "console_mode", "verb_label", "verb_slider",
+        "available_fonts", "verb_label", "verb_slider",
         "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider",
         "last_render_time"
     )
@@ -188,7 +188,6 @@ class AuraWindow(QMainWindow):
             return ""
 
     def ensure_ollama_running(self):
-        if getattr(self, 'console_mode', False): return
         try:
             import requests
             requests.get("http://127.0.0.1:11434/", timeout=1)
@@ -198,22 +197,11 @@ class AuraWindow(QMainWindow):
             import time
             time.sleep(2) # Give it a moment to bind
 
-    def check_console_mode(self):
-        # Detect if running on Xbox or via --console flag
-        self.console_mode = "--console" in sys.argv or os.environ.get("AURA_TARGET") == "XBOX"
-        if self.console_mode:
-            print("AURA // Console Mode Active [X64_XBOX]")
-
     def __init__(self):
         super().__init__()
-        self.check_console_mode()
         self.check_mandates() # Decorator enforced method
         self.setWindowTitle("Aura // Local AI")
-        
-        if getattr(self, 'console_mode', False):
-            self.showFullScreen()
-        else:
-            self.resize(1200, 800)
+        self.resize(1200, 800)
         
         # Set Window Icon
         icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
@@ -228,7 +216,7 @@ class AuraWindow(QMainWindow):
         available_tags = [m['name'] for m in self.engine.get_available_models()]
         
         # ⚡ ASAHI OPTIMIZATION: Prioritize Phi-3 Mini as default (Low RAM footprint)
-        priority_models = ["phi3:mini", "qwen2.5:7b", "gemma2:2b"]
+        priority_models = ["phi3:mini", "phi3:latest", "qwen2.5:7b", "qwen2.5:latest", "gemma2:2b", "gemma2:latest"]
         self.model = None
         for p in priority_models:
             if p in available_tags:
@@ -329,7 +317,7 @@ class AuraWindow(QMainWindow):
         # Right Side (Settings Panel)
         self.settings_panel = QWidget()
         self.settings_panel.setObjectName("settings_panel")
-        self.settings_panel.setFixedWidth(450 if getattr(self, 'console_mode', False) else 300)
+        self.settings_panel.setFixedWidth(300)
         self.settings_panel.setVisible(False)
         settings_layout = QVBoxLayout()
         settings_layout.setContentsMargins(20, 30, 20, 30)
@@ -439,7 +427,7 @@ class AuraWindow(QMainWindow):
         # Models Panel
         self.models_panel = QWidget()
         self.models_panel.setObjectName("models_panel")
-        self.models_panel.setFixedWidth(450 if getattr(self, 'console_mode', False) else 300)
+        self.models_panel.setFixedWidth(300)
         self.models_panel.setVisible(False)
         mp_layout = QVBoxLayout()
         mp_layout.setContentsMargins(20, 30, 20, 30)
@@ -492,10 +480,6 @@ class AuraWindow(QMainWindow):
 
         # Session Restoration
         self.load_session()
-        
-        # 🎮 XBOX: Enable Gamepad focus navigation
-        if getattr(self, 'console_mode', False):
-            self.setup_console_navigation()
 
     def update_stylesheet(self):
         teal = f"rgba(0, 230, 230, {0.5 * self.saturation})"
@@ -621,26 +605,7 @@ class AuraWindow(QMainWindow):
         except:
             pass
 
-    def setup_console_navigation(self):
-        # Set larger base font for 10-foot UI
-        self.font_size_slider.setValue(22)
-        self.update_font_size(22)
-        
-        # Enable focus for all interactive widgets
-        for widget in [self.input_field, self.models_toggle, self.settings_toggle, self.models_list]:
-            widget.setFocusPolicy(Qt.StrongFocus)
-
     def keyPressEvent(self, event):
-        # Map Gamepad Buttons (Standard UWP Mappings)
-        if getattr(self, 'console_mode', False):
-            if event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return: # Button A
-                self.process_input()
-            elif event.key() == Qt.Key_Escape: # Button B
-                self.input_field.clear()
-            elif event.key() == Qt.Key_F1: # Button X
-                self.settings_toggle.click()
-            elif event.key() == Qt.Key_F2: # Button Y
-                self.models_toggle.click()
         super().keyPressEvent(event)
 
     def load_custom_fonts(self):
