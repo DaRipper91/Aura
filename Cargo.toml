@@ -1,0 +1,25 @@
+[package]
+name = "aura-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# ⚡ THE WARP DRIVE ENGINE
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+colored = "2.0"
+textwrap = "0.16"
+
+# 🎨 THE CYBER-CHROME UI
+ratatui = "0.26"
+crossterm = { version = "0.27", features = ["event-stream"] }
+
+[profile.release]
+opt-level = "z" # Optimize for size (UWP/Android friendly)
+lto = true
+codegen-units = 1
+panic = "abort"
