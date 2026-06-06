@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aura"
+version = "1.0.6"
+description = "Aura // Local AI Interchange"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PySide6",
+    "requests",
+    "markdown-it-py"
+]
+
+[project.scripts]
+aura = "main:main"
+
+[tool.setuptools]
+packages = ["aura", "aura_core"]
+package-dir = {"" = "python"}
