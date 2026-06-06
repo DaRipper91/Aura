@@ -822,6 +822,13 @@ class AuraWindow(QMainWindow):
                 self.input_field.clear()
                 return
 
+            if cmd == "kill":
+                self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // EXECUTING NUCLEAR OPTION: KILLING OLLAMA SERVER...</i></p>")
+                subprocess.run(["sudo", "systemctl", "stop", "ollama"], check=False)
+                self.abort_generation()
+                self.input_field.clear()
+                return
+
             alias_map = {
 
                 "phi": "phi3:mini",
