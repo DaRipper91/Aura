@@ -304,6 +304,7 @@ class AuraWindow(QMainWindow):
 
         self.input_field = AutoResizingTextEdit()
         self.input_field.setPlaceholderText("DESCRIBE THE VOID...")
+        self.input_field.setToolTip("Press Enter to send, Shift+Enter for new line")
         self.input_field.returnPressed.connect(self.process_input)
         chat_container.addWidget(self.input_field)
 
@@ -457,6 +458,9 @@ class AuraWindow(QMainWindow):
                 font-family: 'Monospace';
                 font-size: 11px;
             }
+            QListWidget:focus {
+                border: 1px solid #00e6e6;
+            }
             QListWidget::item:selected {
                 background-color: #2D1B4E;
             }
@@ -547,6 +551,24 @@ class AuraWindow(QMainWindow):
                 background: #00e6e6;
                 width: 12px;
                 border-radius: 6px;
+            }}
+            QSlider:focus::handle:horizontal {{
+                border: 2px solid #ffffff;
+                background: #00cccc;
+            }}
+            QLineEdit, QComboBox {{
+                background-color: rgba(128, 0, 128, 0.1);
+                color: #E0E0E0;
+                border: 1px solid {purple};
+                padding: 4px;
+                border-radius: 4px;
+                font-family: 'Monospace';
+                font-size: 10px;
+            }}
+            QLineEdit:focus, QComboBox:focus {{
+                border: 1px solid #00e6e6;
+                background-color: rgba(128, 0, 128, 0.2);
+                outline: none;
             }}
             QPushButton {{
                 background-color: rgba(128, 0, 128, 0.1);
