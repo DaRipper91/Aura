@@ -11,7 +11,7 @@ class OllamaClient:
     Handles API orchestration (Ollama, Gemini, Claude, Codex) and multi-turn context.
     Strictly logic-only; no UI/TUI rendering.
     """
-    __slots__ = ("base_url", "project_root", "history", "current_model", "last_context", "verbosity", "active_profile")
+    __slots__ = ("base_url", "project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "_is_asahi_cached")
 
     MODELS = {
         "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},
@@ -41,13 +41,19 @@ class OllamaClient:
         self.current_model = "phi3:mini"
         self.last_context = None
         self.verbosity = 0.5 # 0.0 (Concise) to 1.0 (Verbose)
+        self._is_asahi_cached = None
         self.active_profile = "ASAHI_POWER" if self.is_asahi() else "HP_LITE"
         self.check_mandates()
 
     def is_asahi(self) -> bool:
+        # ⚡ BOLT OPTIMIZATION: Cache hardware detection to prevent O(N) redundant disk I/O on UI telemetry updates
+        if self._is_asahi_cached is not None:
+            return self._is_asahi_cached
         try:
-            return os.path.exists("/proc/device-tree/model") and "Apple" in open("/proc/device-tree/model").read()
+            self._is_asahi_cached = os.path.exists("/proc/device-tree/model") and "Apple" in open("/proc/device-tree/model").read()
+            return self._is_asahi_cached
         except:
+            self._is_asahi_cached = False
             return False
 
     def set_verbosity(self, value: float):
