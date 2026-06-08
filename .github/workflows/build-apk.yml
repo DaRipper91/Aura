@@ -31,22 +31,25 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Gradle
+        if: ${{ hashFiles('android/settings.gradle') != '' || hashFiles('android/settings.gradle.kts') != '' }}
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.2.1
 
       - name: Bundle Models into Assets
+        if: ${{ hashFiles('android/settings.gradle') != '' || hashFiles('android/settings.gradle.kts') != '' }}
         run: |
           mkdir -p android/app/src/main/assets/models
           curl -L "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_seq128_q8_ekv1280.task" -o "android/app/src/main/assets/models/QWEN_1.5B.bin"
           curl -L "https://huggingface.co/google/phi-3-mini-4k-instruct-tflite/resolve/main/phi-3-mini-4k-instruct.bin" -o "android/app/src/main/assets/models/PHI3_MINI.bin"
 
       - name: Build Debug APK with Chaquopy
+        if: ${{ hashFiles('android/settings.gradle') != '' || hashFiles('android/settings.gradle.kts') != '' }}
         run: gradle assembleDebug
         working-directory: ./android
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && (hashFiles('android/settings.gradle') != '' || hashFiles('android/settings.gradle.kts') != '') }}
         uses: softprops/action-gh-release@v2
         with:
           files: android/app/build/outputs/apk/debug/app-debug.apk
