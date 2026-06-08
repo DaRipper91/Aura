@@ -163,7 +163,7 @@ class OllamaClient:
     Handles API orchestration (Ollama, Gemini, Claude, Codex) and multi-turn context.
     Strictly logic-only; no UI/TUI rendering.
     """
-    __slots__ = ("base_url", "_project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "project_context")
+    __slots__ = ("base_url", "_project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "project_context", "operation_mode")
 
     MODELS = {
         "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},
@@ -190,6 +190,39 @@ class OllamaClient:
         "gemma2:2b",
     }
 
+    OPERATION_MODES = {
+        "safe": {
+            "label": "Safe",
+            "summary": "Read-only review mode.",
+            "allow": ("read", "search", "list", "gh"),
+            "deny": ("write", "replace", "chmod", "install", "update", "restart", "delete", "uninstall"),
+        },
+        "developer": {
+            "label": "Developer",
+            "summary": "Workspace edits and permission changes.",
+            "allow": ("read", "search", "list", "write", "replace", "chmod", "git", "gh"),
+            "deny": ("delete", "uninstall"),
+        },
+        "installer": {
+            "label": "Installer",
+            "summary": "Dev mode plus package install/update.",
+            "allow": ("read", "search", "list", "write", "replace", "chmod", "git", "gh", "install", "update", "restart"),
+            "deny": ("delete", "uninstall"),
+        },
+        "admin-lite": {
+            "label": "Admin Lite",
+            "summary": "Installer mode with cautious system maintenance.",
+            "allow": ("read", "search", "list", "write", "replace", "chmod", "git", "gh", "install", "update", "restart", "service"),
+            "deny": ("delete", "uninstall", "wipe", "reset"),
+        },
+        "danger-confirmed": {
+            "label": "Danger Confirmed",
+            "summary": "Destructive actions only after explicit confirmation.",
+            "allow": ("read", "search", "list", "write", "replace", "chmod", "git", "gh", "install", "update", "restart", "delete", "uninstall"),
+            "deny": (),
+        },
+    }
+
     PROFILES = {
         "ASAHI_POWER": {"num_ctx": 8192, "num_thread": 8, "use_mmap": True},
         "HP_LITE": {"num_ctx": 1024, "num_thread": 2, "use_mmap": True},
@@ -204,6 +237,9 @@ class OllamaClient:
         self.last_context = None
         self.verbosity = 0.5 # 0.0 (Concise) to 1.0 (Verbose)
         self.active_profile = "ASAHI_POWER" if self.is_asahi() else "HP_LITE"
+        self.operation_mode = os.environ.get("AURA_OPERATION_MODE", "installer").strip().lower()
+        if self.operation_mode not in self.OPERATION_MODES:
+            self.operation_mode = "installer"
         self.project_context = self.load_project_context()
         self.check_mandates()
 
@@ -253,11 +289,27 @@ class OllamaClient:
         if profile_name in self.PROFILES:
             self.active_profile = profile_name
 
+    def set_operation_mode(self, mode_name: str):
+        if mode_name in self.OPERATION_MODES:
+            self.operation_mode = mode_name
+
     def get_default_model(self) -> str:
         env_model = os.environ.get("AURA_DEFAULT_MODEL", "").strip()
         if env_model:
             return env_model
         return "qwen2.5-coder:1.5b"
+
+    def get_operation_mode_prompt(self) -> str:
+        mode = self.OPERATION_MODES.get(self.operation_mode, self.OPERATION_MODES["installer"])
+        allow_list = ", ".join(mode["allow"]) if mode["allow"] else "none"
+        deny_list = ", ".join(mode["deny"]) if mode["deny"] else "none"
+        return (
+            f"OPERATION_MODE: {self.operation_mode.upper()} // {mode['summary']}\n"
+            f"ALLOWED_ACTIONS: {allow_list}\n"
+            f"DENIED_ACTIONS: {deny_list}\n"
+            "POLICY: Follow local permissions and ask for escalation when an action is blocked.\n"
+            "GITHUB: Use the `gh` CLI for GitHub tasks involving repos, PRs, issues, releases, or workflows.\n"
+        )
 
     def get_keep_alive(self) -> str:
         value = os.environ.get("AURA_KEEP_ALIVE", "0").strip()
@@ -327,7 +379,7 @@ class OllamaClient:
             "5. list_directory: {dir_path}\n"
             "6. run_shell_command: {command}\n"
             "7. aider_fix: {file_path, instructions}\n\n"
-            "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, and network-assisted workflows through tools.\n"
+            "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute, output strictly <tool_call>{JSON}</tool_call>. No other text."
         )
@@ -336,6 +388,7 @@ class OllamaClient:
         if self.verbosity < 0.1:
             return (
                 f"{base_identity}\n"
+                f"{self.get_operation_mode_prompt()}\n"
                 "STRICT_PROTOCOL: CONCISE_CODE_ONLY.\n"
             ) + tool_instructions
 
@@ -344,7 +397,7 @@ class OllamaClient:
                 "Output format: Comprehensive technical analysis." if self.verbosity > 0.7 else \
                 "Output format: Balanced technical response."
         
-        full_prompt = f"{base_identity}\n\n{style}\n\nEnsure responses are concise and high-signal."
+        full_prompt = f"{base_identity}\n{self.get_operation_mode_prompt()}\n{style}\n\nEnsure responses are concise and high-signal."
         
         if self.project_context:
             full_prompt += "\n" + self.project_context

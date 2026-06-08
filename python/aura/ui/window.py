@@ -184,7 +184,8 @@ class AuraWindow(QMainWindow):
         "available_fonts", "verb_label", "verb_slider",
         "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider",
         "last_render_time", "remote_search_input", "remote_search_btn",
-        "remote_models_list", "remote_pull_btn", "remote_models"
+        "remote_models_list", "remote_pull_btn", "remote_models",
+        "operation_mode_combo", "command_preset_combo", "commands_btn"
     )
 
     def get_git_branch(self, path):
@@ -459,6 +460,37 @@ class AuraWindow(QMainWindow):
 
         console_group.setLayout(c_form)
         settings_layout.addWidget(console_group)
+
+        # 1.75 Mode & Commands
+        commands_group = QGroupBox("MODES_AND_COMMANDS")
+        cmd_form = QFormLayout()
+
+        self.operation_mode_combo = QComboBox()
+        self.operation_mode_combo.addItems(list(OllamaClient.OPERATION_MODES.keys()))
+        self.operation_mode_combo.setCurrentText(self.engine.operation_mode)
+        self.operation_mode_combo.currentTextChanged.connect(self.update_operation_mode)
+        cmd_form.addRow(QLabel("MODE:"), self.operation_mode_combo)
+
+        self.command_preset_combo = QComboBox()
+        self.command_preset_combo.addItems([
+            "/commands",
+            "/help",
+            "/models",
+            "/model qwen2.5-coder:1.5b",
+            "/model qwen2.5:7b",
+            "/model phi3:mini",
+            "/phi",
+            "/coder",
+            "/gemma",
+        ])
+        cmd_form.addRow(QLabel("COMMAND:"), self.command_preset_combo)
+
+        self.commands_btn = QPushButton("RUN_COMMAND")
+        self.commands_btn.clicked.connect(self.run_selected_command)
+        cmd_form.addRow(self.commands_btn)
+
+        commands_group.setLayout(cmd_form)
+        settings_layout.addWidget(commands_group)
         
         # 2. Typography
         typo_group = QGroupBox("TYPOGRAPHY")
@@ -701,6 +733,20 @@ class AuraWindow(QMainWindow):
         self.engine.set_profile(profile)
         self.ghost_log.log(f"HARDWARE_PROFILE: {profile} ACTIVATED")
         self.trigger_glitch()
+
+    def update_operation_mode(self, mode):
+        self.engine.set_operation_mode(mode)
+        self.ghost_log.log(f"OPERATION_MODE: {mode.upper()} ACTIVATED")
+        self.output_area.append(
+            f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Operation mode set to {html.escape(mode)}</i></p>"
+        )
+
+    def run_selected_command(self):
+        command = self.command_preset_combo.currentText().strip()
+        if not command:
+            return
+        self.input_field.setPlainText(command)
+        self.process_input()
 
     def trigger_glitch(self):
         # Subtle analog glitch effect
@@ -1061,6 +1107,18 @@ class AuraWindow(QMainWindow):
 
             self.trigger_glitch()
 
+            if cmd == "commands":
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // COMMANDS & MODEL OPTIONS:</i></p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/commands</b> - Show this list</p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model qwen2.5-coder:1.5b</b> - Small default coding model</p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model qwen2.5:7b</b> - Larger Qwen model</p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model phi3:mini</b> - Tiny fallback model</p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>MODEL ALIASES:</i> /coder, /qwen, /phi, /gemma, /deep</p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>OPERATION MODES:</i> safe, developer, installer, admin-lite, danger-confirmed</p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>GH CLI:</i> try <b>gh auth status</b>, <b>gh repo view</b>, <b>gh pr list</b>, <b>gh workflow list</b></p>")
+                self.input_field.clear()
+                return
+
             if cmd == "help":
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // TUNED VOICES:</i></p>")
                 for alias, m_id in alias_map.items():
@@ -1068,7 +1126,7 @@ class AuraWindow(QMainWindow):
                         safe_model_name = html.escape(OllamaClient.MODELS[m_id]['name'])
                         safe_alias = html.escape(alias)
                         self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{safe_alias}</b> - {safe_model_name}</p>")
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>TYPE /MODELS TO SCAN LOCAL SYSTEM</i></p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>TYPE /COMMANDS FOR MODELS, MODES, AND GH SHORTCUTS</i></p>")
                 self.input_field.clear()
                 return
 
