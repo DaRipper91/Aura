@@ -163,7 +163,7 @@ class OllamaClient:
     Handles API orchestration (Ollama, Gemini, Claude, Codex) and multi-turn context.
     Strictly logic-only; no UI/TUI rendering.
     """
-    __slots__ = ("base_url", "_project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "project_context", "operation_mode")
+    __slots__ = ("base_url", "_project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "project_context", "operation_mode", "_is_asahi_cached")
 
     MODELS = {
         "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},
@@ -235,6 +235,7 @@ class OllamaClient:
         self.history: List[Dict[str, str]] = []
         self.current_model = self.get_default_model()
         self.last_context = None
+        self._is_asahi_cached = None
         self.verbosity = 0.5 # 0.0 (Concise) to 1.0 (Verbose)
         self.active_profile = "ASAHI_POWER" if self.is_asahi() else "HP_LITE"
         self.operation_mode = os.environ.get("AURA_OPERATION_MODE", "installer").strip().lower()
@@ -277,10 +278,13 @@ class OllamaClient:
         return "\n# PROJECT_CONTEXT\n" + "\n".join(loaded_content)
 
     def is_asahi(self) -> bool:
+        if self._is_asahi_cached is not None:
+            return self._is_asahi_cached
         try:
-            return os.path.exists("/proc/device-tree/model") and "Apple" in open("/proc/device-tree/model").read()
+            self._is_asahi_cached = os.path.exists("/proc/device-tree/model") and "Apple" in open("/proc/device-tree/model").read()
         except:
-            return False
+            self._is_asahi_cached = False
+        return self._is_asahi_cached
 
     def set_verbosity(self, value: float):
         self.verbosity = value
