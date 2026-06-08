@@ -299,7 +299,7 @@ class AuraWindow(QMainWindow):
                 break
         
         if not self.model:
-            self.model = available_tags[0] if available_tags else "qwen2.5-coder:1.5b"
+            self.model = available_tags[0] if available_tags else self.engine.get_default_model()
         
         lightweight_models = [model for model in available_tags if self.engine.is_lightweight_model(model)]
         self.models = lightweight_models if lightweight_models else (available_tags if available_tags else [self.model])
@@ -928,7 +928,7 @@ class AuraWindow(QMainWindow):
             )
             self.populate_models_list()
             if self.model == target:
-                self.model = self.models[0] if self.models else "qwen2.5-coder:1.5b"
+                self.model = self.models[0] if self.models else self.engine.get_default_model()
                 self._sync_model_selector()
         else:
             error_text = html.escape((result.stderr or result.stdout or "Unknown error").strip())

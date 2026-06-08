@@ -200,7 +200,7 @@ class OllamaClient:
         self.base_url = base_url
         self._project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
-        self.current_model = "qwen2.5-coder:1.5b"
+        self.current_model = self.get_default_model()
         self.last_context = None
         self.verbosity = 0.5 # 0.0 (Concise) to 1.0 (Verbose)
         self.active_profile = "ASAHI_POWER" if self.is_asahi() else "HP_LITE"
@@ -252,6 +252,12 @@ class OllamaClient:
     def set_profile(self, profile_name: str):
         if profile_name in self.PROFILES:
             self.active_profile = profile_name
+
+    def get_default_model(self) -> str:
+        env_model = os.environ.get("AURA_DEFAULT_MODEL", "").strip()
+        if env_model:
+            return env_model
+        return "qwen2.5-coder:1.5b"
 
     def get_keep_alive(self) -> str:
         value = os.environ.get("AURA_KEEP_ALIVE", "0").strip()
