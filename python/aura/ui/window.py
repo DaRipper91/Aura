@@ -483,6 +483,7 @@ class AuraWindow(QMainWindow):
             "/coder",
             "/gemma",
         ])
+        self.command_preset_combo.currentTextChanged.connect(lambda _text: self.save_session())
         cmd_form.addRow(QLabel("COMMAND:"), self.command_preset_combo)
 
         self.commands_btn = QPushButton("RUN_COMMAND")
@@ -774,7 +775,13 @@ class AuraWindow(QMainWindow):
                         saved_model = data.get("current_model")
                         if saved_model:
                             self.model = saved_model
+                            self.engine.current_model = saved_model
                             self._sync_model_selector()
+                        saved_command = data.get("command_preset")
+                        if saved_command:
+                            self.command_preset_combo.blockSignals(True)
+                            self.command_preset_combo.setCurrentText(saved_command)
+                            self.command_preset_combo.blockSignals(False)
                     self.render_messages()
                     self.ghost_log.log("SESSION_RE_ANIMATED: OK")
         except:
@@ -789,6 +796,7 @@ class AuraWindow(QMainWindow):
                         "messages": self.messages,
                         "operation_mode": self.engine.operation_mode,
                         "current_model": self.model,
+                        "command_preset": self.command_preset_combo.currentText(),
                     },
                     f,
                 )
@@ -846,10 +854,12 @@ class AuraWindow(QMainWindow):
             new_model = self.model_mapping[text]
             if self.model != new_model:
                 self.model = new_model
+                self.engine.current_model = new_model
                 self.engine.clear_history()
                 self.trigger_glitch()
                 safe_text = html.escape(text)
                 self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_text} (Context Cleared)</i></p>")
+                self.save_session()
 
     def toggle_models(self):
         if self.models_toggle.isChecked():
@@ -977,6 +987,8 @@ class AuraWindow(QMainWindow):
         friendly_name = OllamaClient.MODELS.get(target, {"name": f"[RAW] {target}"})["name"]
         safe_friendly_name = html.escape(friendly_name)
         self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
+        self.engine.current_model = self.model
+        self.save_session()
 
     def remove_selected_model(self):
         items = self.models_list.selectedItems()
@@ -1161,11 +1173,13 @@ class AuraWindow(QMainWindow):
                 for display_name, m_id in self.model_mapping.items():
                     if target in m_id.lower():
                         self.model = m_id
+                        self.engine.current_model = m_id
                         self.engine.clear_history()
                         self._sync_model_selector()
                         friendly_name = OllamaClient.MODELS.get(m_id, {"name": f"[RAW] {m_id}"})["name"]
                         safe_friendly_name = html.escape(friendly_name)
                         self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
+                        self.save_session()
                         self.input_field.clear()
                         return
                 
@@ -1178,11 +1192,13 @@ class AuraWindow(QMainWindow):
                 target_model = alias_map[cmd]
                 if target_model in self.models:
                     self.model = target_model
+                    self.engine.current_model = target_model
                     self.engine.clear_history()
                     self._sync_model_selector()
                     friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
                     safe_friendly_name = html.escape(friendly_name)
                     self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
+                    self.save_session()
                     self.input_field.clear()
                     return
 
@@ -1190,12 +1206,14 @@ class AuraWindow(QMainWindow):
             for key in self.models:
                 if cmd in key.lower():
                     self.model = key
+                    self.engine.current_model = key
                     self.engine.clear_history()
                     self._sync_model_selector()
                     friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
                     safe_friendly_name = html.escape(friendly_name)
                     self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
                     found = True
+                    self.save_session()
                     break
             
             if not found:
