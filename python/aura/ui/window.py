@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTextEdit, QLineEdit, 
     QLabel, QHBoxLayout, QSlider, QFormLayout, QGroupBox, QPushButton,
-    QComboBox, QFileDialog, QListWidget, QFrame, QScrollArea, QGraphicsOpacityEffect
+    QComboBox, QFileDialog, QListWidget, QListWidgetItem, QFrame, QScrollArea, QGraphicsOpacityEffect
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer, QPropertyAnimation, QEasingCurve, QPoint
 from PySide6.QtGui import QIcon, QFontDatabase, QFont, QPainter, QColor, QLinearGradient, QPen
@@ -16,6 +16,7 @@ import html
 import subprocess
 import time
 import random
+import tempfile
 from typing import Optional
 
 class GhostLogArea(QTextEdit):
@@ -134,14 +135,14 @@ class ChatWorker(QThread):
     def run(self):
         # ⚡ PURE PYTHON: Verfied native stream
         try:
-            for chunk in self.engine.stream_chat(self.model, self.prompt, self.options):
+            for chunk in self.engine.autonomous_chat(self.model, self.prompt):
                 if not self.is_running:
                     break
                 self.chunk_received.emit(chunk)
         except Exception as e:
             if self.is_running:
                 self.chunk_received.emit(f"\n[Aura Error: {str(e)}]")
-        
+
         self.finished.emit()
 
 class AutoResizingTextEdit(QTextEdit):
@@ -182,7 +183,8 @@ class AuraWindow(QMainWindow):
         "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing",
         "available_fonts", "verb_label", "verb_slider",
         "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider",
-        "last_render_time"
+        "last_render_time", "remote_search_input", "remote_search_btn",
+        "remote_models_list", "remote_pull_btn", "remote_models"
     )
 
     def get_git_branch(self, path):
@@ -194,15 +196,79 @@ class AuraWindow(QMainWindow):
         except:
             return ""
 
+    def resolve_ollama_home(self) -> str:
+        override = os.environ.get("AURA_OLLAMA_HOME", "").strip()
+        if override:
+            runtime_home = os.path.abspath(os.path.expanduser(override))
+            os.makedirs(runtime_home, exist_ok=True)
+            return runtime_home
+
+        user_home = os.path.expanduser("~")
+        if user_home and os.access(user_home, os.W_OK):
+            return user_home
+
+        runtime_home = os.path.join(tempfile.gettempdir(), "aura-ollama-home")
+        os.makedirs(runtime_home, exist_ok=True)
+        return runtime_home
+
     def ensure_ollama_running(self):
         try:
             import requests
             requests.get("http://127.0.0.1:11434/", timeout=1)
-        except:
-            print("OLLAMA // Starting server...")
-            subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            import time
-            time.sleep(2) # Give it a moment to bind
+            return
+        except Exception:
+            pass
+
+        runtime_home = self.resolve_ollama_home()
+        runtime_env = os.environ.copy()
+        runtime_env["HOME"] = runtime_home
+
+        models_dir = os.environ.get("OLLAMA_MODELS")
+        if not models_dir:
+            models_dir = os.path.join(runtime_home, ".ollama", "models")
+            runtime_env["OLLAMA_MODELS"] = models_dir
+
+        print(f"OLLAMA // Starting server with HOME={runtime_home}")
+        print(f"OLLAMA // Models directory: {models_dir}")
+
+        try:
+            process = subprocess.Popen(
+                ["ollama", "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                env=runtime_env,
+                text=True,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError("Ollama binary not found. Install Ollama and ensure it is on PATH.") from exc
+
+        last_error = ""
+        for _ in range(20):
+            try:
+                requests.get("http://127.0.0.1:11434/", timeout=1)
+                return
+            except Exception:
+                if process.poll() is not None:
+                    break
+                time.sleep(0.25)
+
+        if process.poll() is None:
+            process.terminate()
+            try:
+                _, last_error = process.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                _, last_error = process.communicate()
+        else:
+            _, last_error = process.communicate()
+
+        last_error = (last_error or "").strip()
+        if last_error:
+            print(f"OLLAMA // Startup error: {last_error}")
+        raise RuntimeError(
+            "Ollama failed to start. If your home directory is read-only, set AURA_OLLAMA_HOME "
+            "to a writable path or OLLAMA_MODELS to a writable models directory."
+        )
 
     def __init__(self):
         super().__init__()
@@ -222,8 +288,8 @@ class AuraWindow(QMainWindow):
         self.engine = OllamaClient()
         available_tags = [m['name'] for m in self.engine.get_available_models()]
         
-        # ⚡ ASAHI OPTIMIZATION: Prioritize Phi-3 Mini as default (Low RAM footprint)
-        priority_models = ["phi3:mini", "phi3:latest", "qwen2.5:7b", "qwen2.5:latest", "gemma2:2b", "gemma2:latest"]
+        # ⚡ Prefer small local models first to keep RAM pressure down.
+        priority_models = list(OllamaClient.DEFAULT_MODEL_ORDER)
         self.model = None
         for p in priority_models:
             if p in available_tags:
@@ -233,13 +299,15 @@ class AuraWindow(QMainWindow):
         if not self.model:
             self.model = available_tags[0] if available_tags else "phi3:mini"
         
-        self.models = available_tags if available_tags else [self.model]
+        lightweight_models = [model for model in available_tags if self.engine.is_lightweight_model(model)]
+        self.models = lightweight_models if lightweight_models else (available_tags if available_tags else [self.model])
+        self.remote_models = []
         
         # Generation Options
         self.gen_options = {
             "temperature": 0.7,
             "top_p": 0.9,
-            "num_ctx": 4096
+            "num_ctx": 1024
         }
         self.md = MarkdownIt()
         self.load_custom_fonts()
@@ -433,6 +501,42 @@ class AuraWindow(QMainWindow):
         pull_layout.addWidget(self.pull_btn)
         pull_group.setLayout(pull_layout)
         settings_layout.addWidget(pull_group)
+
+        browse_group = QGroupBox("BROWSE_LIBRARY")
+        browse_layout = QVBoxLayout()
+        browse_row = QHBoxLayout()
+        self.remote_search_input = QLineEdit()
+        self.remote_search_input.setPlaceholderText("Search Ollama library")
+        self.remote_search_input.returnPressed.connect(self.search_remote_models)
+        self.remote_search_btn = QPushButton("SEARCH")
+        self.remote_search_btn.clicked.connect(self.search_remote_models)
+        browse_row.addWidget(self.remote_search_input)
+        browse_row.addWidget(self.remote_search_btn)
+        browse_layout.addLayout(browse_row)
+
+        self.remote_models_list = QListWidget()
+        self.remote_models_list.setStyleSheet("""
+            QListWidget {
+                background-color: #0F0F0F;
+                color: #00e6e6;
+                border: 1px solid #1A1A1A;
+                font-family: 'Monospace';
+                font-size: 10px;
+            }
+            QListWidget::item:selected {
+                background-color: #2D1B4E;
+            }
+        """)
+        browse_layout.addWidget(self.remote_models_list)
+
+        remote_btn_row = QHBoxLayout()
+        self.remote_pull_btn = QPushButton("PULL SELECTED")
+        self.remote_pull_btn.clicked.connect(self.pull_selected_remote_model)
+        remote_btn_row.addWidget(self.remote_pull_btn)
+        browse_layout.addLayout(remote_btn_row)
+
+        browse_group.setLayout(browse_layout)
+        settings_layout.addWidget(browse_group)
         
         settings_layout.addStretch()
         self.settings_panel.setLayout(settings_layout)
@@ -467,6 +571,10 @@ class AuraWindow(QMainWindow):
         switch_btn = QPushButton("SWITCH")
         switch_btn.clicked.connect(self.switch_to_selected_model)
         btn_layout.addWidget(switch_btn)
+
+        remove_btn = QPushButton("REMOVE")
+        remove_btn.clicked.connect(self.remove_selected_model)
+        btn_layout.addWidget(remove_btn)
 
         refresh_btn = QPushButton("REFRESH")
         refresh_btn.clicked.connect(self.populate_models_list)
@@ -652,6 +760,8 @@ class AuraWindow(QMainWindow):
         if self.settings_toggle.isChecked():
             self.models_toggle.setChecked(False)
             self.models_panel.setVisible(False)
+            if not self.remote_models:
+                self.search_remote_models()
         self.settings_panel.setVisible(self.settings_toggle.isChecked())
 
     def _sync_model_selector(self):
@@ -686,7 +796,89 @@ class AuraWindow(QMainWindow):
             name = m.get("name", "Unknown")
             size = m.get("size", 0) / (1024**3)
             status = "[TUNED]" if name in OllamaClient.MODELS else "[RAW]"
-            self.models_list.addItem(f"{name} ({size:.1f}GB) {status}")
+            weight = "[LIGHT]" if self.engine.is_lightweight_model(name) else "[HEAVY]"
+            self.models_list.addItem(f"{name} ({size:.1f}GB) {status} {weight}")
+
+    def fetch_remote_models(self, query: str = ""):
+        import requests
+
+        url = "https://www.ollama.com/search"
+        params = {}
+        if query:
+            params["q"] = query
+
+        response = requests.get(url, params=params, timeout=10, headers={"User-Agent": "Aura/1.0"})
+        response.raise_for_status()
+
+        html_text = response.text
+        models = []
+        seen = set()
+        for match in re.finditer(r'href="/library/([^"/?#]+)"', html_text):
+            slug = match.group(1)
+            if slug in seen:
+                continue
+            seen.add(slug)
+            window = html_text[match.start():match.start() + 900]
+            cleaned = re.sub(r"<[^>]+>", " ", window)
+            cleaned = html.unescape(re.sub(r"\s+", " ", cleaned)).strip()
+            cleaned = cleaned.replace(slug, "").strip()
+            if query and query.lower() not in cleaned.lower() and query.lower() not in slug.lower():
+                continue
+            models.append({"slug": slug, "summary": cleaned[:220]})
+            if len(models) >= 40:
+                break
+        return models
+
+    def search_remote_models(self):
+        query = self.remote_search_input.text().strip()
+        self.remote_models_list.clear()
+        self.remote_models = []
+
+        self.remote_models_list.addItem("Loading Ollama library...")
+        try:
+            self.remote_models = self.fetch_remote_models(query)
+        except Exception as exc:
+            self.remote_models_list.clear()
+            self.remote_models_list.addItem(f"Search failed: {exc}")
+            return
+
+        self.remote_models_list.clear()
+        if not self.remote_models:
+            self.remote_models_list.addItem("No models found.")
+            return
+
+        for model in self.remote_models:
+            slug = model["slug"]
+            summary = model["summary"] or "No description available."
+            item = QListWidgetItem(f"{slug} — {summary}")
+            item.setData(Qt.UserRole, slug)
+            self.remote_models_list.addItem(item)
+
+    def pull_selected_remote_model(self):
+        items = self.remote_models_list.selectedItems()
+        if not items:
+            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NO REMOTE MODEL SELECTED</i></p>")
+            return
+
+        slug = items[0].data(Qt.UserRole) or items[0].text().split(" — ")[0].strip()
+        if not slug:
+            return
+
+        safe_slug = html.escape(slug)
+        self.output_area.append(
+            f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Pulling remote model: {safe_slug}</i></p>"
+        )
+        result = subprocess.run(["ollama", "pull", slug], capture_output=True, text=True)
+        if result.returncode == 0:
+            self.output_area.append(
+                f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // Pulled {safe_slug}</i></p>"
+            )
+            self.populate_models_list()
+        else:
+            error_text = html.escape((result.stderr or result.stdout or "Unknown error").strip())
+            self.output_area.append(
+                f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // PULL FAILED: {error_text}</i></p>"
+            )
 
     def switch_to_selected_model(self):
         items = self.models_list.selectedItems()
@@ -716,6 +908,31 @@ class AuraWindow(QMainWindow):
         friendly_name = OllamaClient.MODELS.get(target, {"name": f"[RAW] {target}"})["name"]
         safe_friendly_name = html.escape(friendly_name)
         self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
+
+    def remove_selected_model(self):
+        items = self.models_list.selectedItems()
+        if not items:
+            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NO MODEL SELECTED</i></p>")
+            return
+
+        target = items[0].text().split(" ")[0]
+        self.output_area.append(
+            f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Removing local model: {html.escape(target)}</i></p>"
+        )
+        result = subprocess.run(["ollama", "rm", target], capture_output=True, text=True)
+        if result.returncode == 0:
+            self.output_area.append(
+                f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // Removed {html.escape(target)}</i></p>"
+            )
+            self.populate_models_list()
+            if self.model == target:
+                self.model = self.models[0] if self.models else "phi3:mini"
+                self._sync_model_selector()
+        else:
+            error_text = html.escape((result.stderr or result.stdout or "Unknown error").strip())
+            self.output_area.append(
+                f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // REMOVE FAILED: {error_text}</i></p>"
+            )
 
     def pull_model(self):
         model_name = self.pull_input.text().strip()

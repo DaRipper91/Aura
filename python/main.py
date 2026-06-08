@@ -21,15 +21,21 @@ else:
     sys.path.append(os.path.join(os.path.dirname(__file__), "python"))
 
 from aura.ui.window import AuraWindow
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    
-    window = AuraWindow()
+
+    try:
+        window = AuraWindow()
+    except RuntimeError as exc:
+        print(f"Startup failed: {exc}")
+        QMessageBox.critical(None, "Aura startup failed", str(exc))
+        return 1
+
     window.show()
-    
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":
