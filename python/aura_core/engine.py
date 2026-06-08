@@ -125,10 +125,11 @@ class ToolRegistry:
         
         # We use --yes to avoid interactive prompts
         # We use --message to pass the instruction
-        cmd = ["aider", "--message", instructions, path, "--yes"]
+        cmd = f"aider --message \"{instructions}\" {path} --yes"
         try:
             result = subprocess.run(
                 cmd,
+                shell=True,
                 capture_output=True,
                 text=True,
                 timeout=120 # Give Aider more time
