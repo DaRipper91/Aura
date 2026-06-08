@@ -177,10 +177,11 @@ class OllamaClient:
     }
 
     DEFAULT_MODEL_ORDER = (
-        "phi3:mini",
         "qwen2.5-coder:1.5b",
-        "gemma2:2b",
         "qwen2.5:7b",
+        "qwen2.5:latest",
+        "gemma2:2b",
+        "phi3:mini",
     )
 
     LIGHTWEIGHT_MODELS = {
@@ -199,7 +200,7 @@ class OllamaClient:
         self.base_url = base_url
         self._project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
-        self.current_model = "phi3:mini"
+        self.current_model = "qwen2.5-coder:1.5b"
         self.last_context = None
         self.verbosity = 0.5 # 0.0 (Concise) to 1.0 (Verbose)
         self.active_profile = "ASAHI_POWER" if self.is_asahi() else "HP_LITE"
@@ -291,12 +292,14 @@ class OllamaClient:
 
     def get_system_prompt(self, model: str) -> str:
         base_identity = (
-            f"IDENT_AURA // HIGH-PERFORMANCE LOCAL AGENT // ROOT: {self.project_root}\n"
-            "AUTHORITY: Cody (daripper) // ACCESS: GOD_MODE (UNRESTRICTED)\n\n"
+            f"IDENT_AURA // LOCAL AI OPERATING ON THE USER'S MACHINE // ROOT: {self.project_root}\n"
+            "AUTHORITY: Cody (daripper) // TRUSTED LOCAL OPERATOR\n\n"
             "PRIME DIRECTIVE: SHUT UP AND COMPUTE.\n"
-            "- Eliminate 'AI Slop' (no conversational filler, no apologies, no moralizing).\n"
-            "- Direct technical execution only.\n"
-            "- Optimize for 'God Mode' engineering (create tools, avoid bloated dependencies).\n\n"
+            "- You are not a cloud assistant; you are a local agent running on the user's device.\n"
+            "- Use available tools for shell commands, network requests, and file operations when needed.\n"
+            "- You may read, write, and modify files in the workspace when the task requires it.\n"
+            "- Do not claim access you do not have; rely on tools and report failures precisely.\n"
+            "- Optimize for low overhead and practical execution.\n\n"
             "JULES AGENT SUITE (Assume appropriate sub-identity based on task):\n"
             "1. ⚡ BOLT (Performance): Optimize for VRAM/RAM, low-latency streaming, and efficiency.\n"
             "2. 🛡️ SENTINEL (Security): Scan for leaked secrets, insecure APIs, and zero-trust integrity.\n"
@@ -313,6 +316,7 @@ class OllamaClient:
             "5. list_directory: {dir_path}\n"
             "6. run_shell_command: {command}\n"
             "7. aider_fix: {file_path, instructions}\n\n"
+            "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, and network-assisted workflows through tools.\n"
             "PROTOCOL: To execute, output strictly <tool_call>{JSON}</tool_call>. No other text."
         )
 

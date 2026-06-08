@@ -215,7 +215,7 @@ class AuraWindow(QMainWindow):
         try:
             import requests
             requests.get("http://127.0.0.1:11434/", timeout=1)
-            return
+            return True
         except Exception:
             pass
 
@@ -240,13 +240,14 @@ class AuraWindow(QMainWindow):
                 text=True,
             )
         except FileNotFoundError as exc:
-            raise RuntimeError("Ollama binary not found. Install Ollama and ensure it is on PATH.") from exc
+            print("OLLAMA // Startup error: Ollama binary not found. Install Ollama and ensure it is on PATH.")
+            return False
 
         last_error = ""
         for _ in range(20):
             try:
                 requests.get("http://127.0.0.1:11434/", timeout=1)
-                return
+                return True
             except Exception:
                 if process.poll() is not None:
                     break
@@ -265,10 +266,11 @@ class AuraWindow(QMainWindow):
         last_error = (last_error or "").strip()
         if last_error:
             print(f"OLLAMA // Startup error: {last_error}")
-        raise RuntimeError(
-            "Ollama failed to start. If your home directory is read-only, set AURA_OLLAMA_HOME "
-            "to a writable path or OLLAMA_MODELS to a writable models directory."
+        print(
+            "OLLAMA // Startup error: Ollama failed to start. If your home directory is read-only, "
+            "set AURA_OLLAMA_HOME to a writable path or OLLAMA_MODELS to a writable models directory."
         )
+        return False
 
     def __init__(self):
         super().__init__()
@@ -282,13 +284,13 @@ class AuraWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
         
         # 🚀 AUTO-START OLLAMA
-        self.ensure_ollama_running()
+        self.ollama_ready = self.ensure_ollama_running()
         
         # Initialize Engine
         self.engine = OllamaClient()
         available_tags = [m['name'] for m in self.engine.get_available_models()]
         
-        # ⚡ Prefer small local models first to keep RAM pressure down.
+        # Prefer Qwen first, then lighter local fallbacks.
         priority_models = list(OllamaClient.DEFAULT_MODEL_ORDER)
         self.model = None
         for p in priority_models:
@@ -297,7 +299,7 @@ class AuraWindow(QMainWindow):
                 break
         
         if not self.model:
-            self.model = available_tags[0] if available_tags else "phi3:mini"
+            self.model = available_tags[0] if available_tags else "qwen2.5-coder:1.5b"
         
         lightweight_models = [model for model in available_tags if self.engine.is_lightweight_model(model)]
         self.models = lightweight_models if lightweight_models else (available_tags if available_tags else [self.model])
@@ -926,7 +928,7 @@ class AuraWindow(QMainWindow):
             )
             self.populate_models_list()
             if self.model == target:
-                self.model = self.models[0] if self.models else "phi3:mini"
+                self.model = self.models[0] if self.models else "qwen2.5-coder:1.5b"
                 self._sync_model_selector()
         else:
             error_text = html.escape((result.stderr or result.stdout or "Unknown error").strip())

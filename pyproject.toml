@@ -16,7 +16,7 @@ dependencies = [
 
 [project.scripts]
 aura = "aura_cli:run_cli"
-aura-gui = "main:main"
+aura-gui = "aura.main:main"
 
 [tool.setuptools]
 packages = ["aura", "aura_core"]
