@@ -740,6 +740,7 @@ class AuraWindow(QMainWindow):
         self.output_area.append(
             f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Operation mode set to {html.escape(mode)}</i></p>"
         )
+        self.save_session()
 
     def run_selected_command(self):
         command = self.command_preset_combo.currentText().strip()
@@ -760,7 +761,20 @@ class AuraWindow(QMainWindow):
             if os.path.exists(session_path):
                 with open(session_path, "r") as f:
                     data = json.load(f)
-                    self.messages = data.get("messages", [])
+                    if isinstance(data, list):
+                        self.messages = data
+                    else:
+                        self.messages = data.get("messages", data.get("history", []))
+                        saved_mode = data.get("operation_mode")
+                        if saved_mode in OllamaClient.OPERATION_MODES:
+                            self.engine.set_operation_mode(saved_mode)
+                            self.operation_mode_combo.blockSignals(True)
+                            self.operation_mode_combo.setCurrentText(saved_mode)
+                            self.operation_mode_combo.blockSignals(False)
+                        saved_model = data.get("current_model")
+                        if saved_model:
+                            self.model = saved_model
+                            self._sync_model_selector()
                     self.render_messages()
                     self.ghost_log.log("SESSION_RE_ANIMATED: OK")
         except:
@@ -770,7 +784,14 @@ class AuraWindow(QMainWindow):
         try:
             session_path = os.path.join(self.engine.project_root, ".aura_session.json")
             with open(session_path, "w") as f:
-                json.dump({"messages": self.messages}, f)
+                json.dump(
+                    {
+                        "messages": self.messages,
+                        "operation_mode": self.engine.operation_mode,
+                        "current_model": self.model,
+                    },
+                    f,
+                )
         except:
             pass
 

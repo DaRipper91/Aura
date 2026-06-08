@@ -322,7 +322,15 @@ class OllamaClient:
         session_path = os.path.join(self.project_root, ".aura_session.json")
         try:
             with open(session_path, "w") as f:
-                json.dump(self.history, f, indent=4)
+                json.dump(
+                    {
+                        "history": self.history,
+                        "current_model": self.current_model,
+                        "operation_mode": self.operation_mode,
+                    },
+                    f,
+                    indent=4,
+                )
         except Exception as e:
             print(f"[ENGINE_WARN] Failed to save session: {e}")
 
