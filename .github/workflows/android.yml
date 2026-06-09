@@ -27,7 +27,7 @@ jobs:
       - name: Bundle Models into Assets
         run: |
           mkdir -p mobile/android/app/src/main/assets/models
-          curl -L "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_seq128_q8_ekv1280.task" -o "mobile/android/app/src/main/assets/models/QWEN_1.5B.bin"
+          # PHI3_MINI remains as the lightweight on-device fallback
           curl -L "https://huggingface.co/google/phi-3-mini-4k-instruct-tflite/resolve/main/phi-3-mini-4k-instruct.bin" -o "mobile/android/app/src/main/assets/models/PHI3_MINI.bin"
 
       - name: Build Debug APK with Chaquopy

@@ -130,17 +130,15 @@ echo "🔥 Warming up Ollama (Pulling Core Models)..."
 systemctl start ollama
 sleep 5
 ollama pull qwen2.5-coder:7b
-ollama pull deepseek-r1:7b
 ollama pull deepseek-coder-v2:16b
 
 # 11.8 CUSTOM MODEL CREATION (Aura Suite)
 echo "🏗️  Creating Custom Aura Models..."
-# Note: These Modelfiles should be in /home/aura/ai-workspace/ollama/
 # We assume the user clones the repo into ai-workspace
-# For the bootstrap, we can pre-create them if the files exist in the chroot
 mkdir -p /home/aura/ai-workspace/ollama
-# [Logic for copying Modelfiles to the hub would go here, 
-# but for now we'll ensure the bootstrap instructions mention it]
+# Note: User must ensure Modelfiles are present before running creation
+# ollama create aura-qwen -f /home/aura/ai-workspace/ollama/Modelfile.aura-qwen
+# ollama create aura-architect -f /home/aura/ai-workspace/ollama/Modelfile.aura-architect
 
 # 13. AURA AUTONOMOUS DAEMON (Background Maintenance)
 echo "🧠 Installing Aura Autonomous Daemon..."

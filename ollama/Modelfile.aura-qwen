@@ -1,4 +1,4 @@
-FROM qwen2.5-coder:1.5b
+FROM qwen2.5-coder:7b
 
 # Sets the system message
 SYSTEM """

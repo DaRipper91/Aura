@@ -236,28 +236,17 @@ class OllamaClient:
     __slots__ = ("base_url", "_project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "project_context", "operation_mode", "_is_asahi_cache")
 
     MODELS = {
-        "aura-qwen:latest": {"name": "Aura Master (GEMA)"},
-        "aura-deepseek:latest": {"name": "Aura Thinker (Reasoning)"},
-        "aura-architect:latest": {"name": "Aura Architect (Structure)"},
-        "qwen2.5-coder:7b": {"name": "Qwen 2.5 Coder (7B)"},
-        "deepseek-r1:7b": {"name": "DeepSeek R1 (7B)"},
-        "phi3:mini": {"name": "Phi-3 Mini (Fallback)"},
+        "aura-qwen:latest": {"name": "Aura Master (7B)"},
+        "aura-architect:latest": {"name": "Aura Architect (16B)"},
     }
 
     DEFAULT_MODEL_ORDER = (
         "aura-qwen:latest",
-        "aura-deepseek:latest",
-        "qwen2.5-coder:1.5b",
-        "deepseek-r1:1.5b",
-        "phi3:mini",
+        "aura-architect:latest",
     )
 
     LIGHTWEIGHT_MODELS = {
         "aura-qwen:latest",
-        "aura-deepseek:latest",
-        "qwen2.5-coder:1.5b",
-        "deepseek-r1:1.5b",
-        "phi3:mini",
     }
 
     OPERATION_MODES = {
