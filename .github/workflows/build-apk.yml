@@ -48,7 +48,20 @@ jobs:
         run: gradle assembleDebug
         working-directory: ./android
 
-      - name: Create Release
+      - name: Update Rolling Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: rolling-release
+          name: "Aura // Latest Rolling Build"
+          body: "Automated build from branch: ${{ github.ref_name }} (Commit: ${{ github.sha }})"
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Versioned Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
