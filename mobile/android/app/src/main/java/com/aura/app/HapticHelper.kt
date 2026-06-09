@@ -45,7 +45,7 @@ class HapticHelper(private val context: Context) {
      * Signifies access denied or gating active.
      */
     fun biometricReject() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibrator?.arePrimitiveEffectsSupported(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibrator?.areAllPrimitivesSupported(
                 VibrationEffect.Composition.PRIMITIVE_QUICK_FALL
             ) == true
         ) {
@@ -53,7 +53,7 @@ class HapticHelper(private val context: Context) {
                 .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_FALL)
                 .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_FALL, 1.0f, 50)
                 .compose()
-            vibrator.vibrate(effect)
+            vibrator?.vibrate(effect)
         } else {
             vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 50, 50, 50), -1))
         }
@@ -64,14 +64,14 @@ class HapticHelper(private val context: Context) {
      * Signifies Tailnet drop or shell termination.
      */
     fun sessionDisconnect() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibrator?.arePrimitiveEffectsSupported(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibrator?.areAllPrimitivesSupported(
                 VibrationEffect.Composition.PRIMITIVE_CLICK
             ) == true
         ) {
             val effect = VibrationEffect.startComposition()
                 .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK)
                 .compose()
-            vibrator.vibrate(effect)
+            vibrator?.vibrate(effect)
         } else {
             vibrator?.vibrate(VibrationEffect.createOneShot(50, 255))
         }
@@ -81,14 +81,14 @@ class HapticHelper(private val context: Context) {
      * TOKEN_THRRUM: Continuous subtle feedback for streaming.
      */
     fun tokenThrum() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibrator?.arePrimitiveEffectsSupported(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && vibrator?.areAllPrimitivesSupported(
                 VibrationEffect.Composition.PRIMITIVE_TICK
             ) == true
         ) {
             val effect = VibrationEffect.startComposition()
                 .addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.3f)
                 .compose()
-            vibrator.vibrate(effect)
+            vibrator?.vibrate(effect)
         } else {
             vibrator?.vibrate(VibrationEffect.createOneShot(10, 50))
         }
