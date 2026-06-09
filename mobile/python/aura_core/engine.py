@@ -140,6 +140,63 @@ class ToolRegistry:
         except Exception as e:
             return f"Error spawning Aider: {e}"
 
+    @staticmethod
+    def shizuku_command(args: dict) -> str:
+        """
+        Executes a shell command via Shizuku's rish.
+        Args: command.
+        """
+        command = args.get("command")
+        if not command:
+            return "Error: command is required"
+        try:
+            # Requires rish in PATH or absolute path. 
+            # We assume 'rish' is available or use 'shizuku_wrapper' logic if needed.
+            # Usually rish is executed as `rish -c "command"`
+            cmd = ["rish", "-c", command]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            output = result.stdout
+            if result.stderr:
+                output += "\nSTDERR:\n" + result.stderr
+            return output if output else f"Shizuku command executed with exit code {result.returncode}"
+        except Exception as e:
+            return f"Error executing Shizuku command: {e}"
+
+    @staticmethod
+    def termux_command(args: dict) -> str:
+        """
+        Executes a command inside the Termux environment via am intent or direct binary execution.
+        Args: command.
+        """
+        command = args.get("command")
+        if not command:
+            return "Error: command is required"
+        try:
+            # We can use adb/shizuku or am to broadcast to Termux's RunCommandService
+            # Example using 'am startservice':
+            cmd = [
+                "am", "startservice",
+                "--user", "0",
+                "-n", "com.termux/com.termux.app.RunCommandService",
+                "-a", "com.termux.RUN_COMMAND",
+                "-e", "com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash",
+                "-e", "com.termux.RUN_COMMAND_ARGUMENTS", "-c," + command.replace(",", "\\,")
+            ]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            return "Termux intent sent: " + result.stdout + result.stderr
+        except Exception as e:
+            return f"Error executing Termux intent: {e}"
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         methods = {
@@ -149,7 +206,9 @@ class ToolRegistry:
             "grep_search": cls.grep_search,
             "list_directory": cls.list_directory,
             "run_shell_command": cls.run_shell_command,
-            "aider_fix": cls.aider_fix
+            "aider_fix": cls.aider_fix,
+            "shizuku_command": cls.shizuku_command,
+            "termux_command": cls.termux_command
         }
         if name in methods:
             return methods[name](args)
@@ -228,9 +287,17 @@ class OllamaClient:
         "MOBILE_STEALTH": {"num_ctx": 512, "num_thread": 1, "use_mmap": False}
     }
 
-    def __init__(self, base_url: str = "http://127.0.0.1:11434"):
-        self.base_url = base_url
-        self._project_root = os.getcwd()
+    def __init__(self, base_url: str = None):
+        # Allow environment override for Hub IP, otherwise check for legacy variable, fallback to localhost
+        env_url = os.environ.get("AURA_LOGIC_HUB_URL", "").strip()
+        if env_url:
+            self.base_url = env_url
+        elif base_url:
+             self.base_url = base_url
+        else:
+             self.base_url = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+
+        self.project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
         self.current_model = self.get_default_model()
         self.last_context = None
@@ -404,7 +471,9 @@ class OllamaClient:
             "4. grep_search: {pattern, dir_path}\n"
             "5. list_directory: {dir_path}\n"
             "6. run_shell_command: {command}\n"
-            "7. aider_fix: {file_path, instructions}\n\n"
+            "7. aider_fix: {file_path, instructions}\n"
+            "8. shizuku_command: {command} (Execute elevated Android commands via rish)\n"
+            "9. termux_command: {command} (Execute commands in Termux environment)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute, output strictly <tool_call>{JSON}</tool_call>. No other text."
