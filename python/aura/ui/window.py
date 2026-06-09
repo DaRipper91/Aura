@@ -558,6 +558,9 @@ class AuraWindow(QMainWindow):
                 font-family: 'Monospace';
                 font-size: 10px;
             }
+            QListWidget:focus {
+                border: 1px solid #00e6e6;
+            }
             QListWidget::item:selected {
                 background-color: #2D1B4E;
             }
@@ -595,6 +598,9 @@ class AuraWindow(QMainWindow):
                 border: 1px solid #1A1A1A;
                 font-family: 'Monospace';
                 font-size: 11px;
+            }
+            QListWidget:focus {
+                border: 1px solid #D4AF37;
             }
             QListWidget::item:selected {
                 background-color: #2D1B4E;
@@ -708,6 +714,16 @@ class AuraWindow(QMainWindow):
             QPushButton:focus {{
                 border-color: #00e6e6;
                 outline: none;
+                background-color: rgba(128, 0, 128, 0.2);
+            }}
+            QLineEdit, QComboBox {{
+                background-color: rgba(13, 13, 26, 0.7);
+                color: #E0E0E0;
+                border: 1px solid {purple};
+                padding: 4px;
+            }}
+            QLineEdit:focus, QComboBox:focus {{
+                border: 1px solid #00e6e6;
                 background-color: rgba(128, 0, 128, 0.2);
             }}
         """)
