@@ -142,6 +142,28 @@ mkdir -p /home/aura/ai-workspace/ollama
 # [Logic for copying Modelfiles to the hub would go here, 
 # but for now we'll ensure the bootstrap instructions mention it]
 
+# 13. AURA AUTONOMOUS DAEMON (Background Maintenance)
+echo "🧠 Installing Aura Autonomous Daemon..."
+cat <<EOT > /etc/systemd/system/aura-daemon.service
+[Unit]
+Description=Aura Autonomous Background Daemon
+After=network.target ollama.service
+
+[Service]
+Type=simple
+User=aura
+WorkingDirectory=/home/aura/ai-workspace
+ExecStart=/usr/bin/python3 python/aura_daemon.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOT
+
+systemctl daemon-reload
+systemctl enable aura-daemon.service
+
 echo "👻 Ghost Protocol: SSH via Tailscale will be enabled on boot."
 
 # 12. AI WORKSPACE & MANDATES
