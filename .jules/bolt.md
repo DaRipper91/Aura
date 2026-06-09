@@ -5,3 +5,7 @@
 ## 2024-08-01 - O(N*M) DOM Layout Bottleneck in Stream UI
 **Learning:** During fast LLM streaming, updating the `QTextEdit` HTML every single chunk causes extreme O(N*M) layout thrashing and redundant Markdown parsing, freezing the UI thread.
 **Action:** Implemented a 33ms (~30 FPS) throttle for streaming UI updates and cached fully-rendered HTML blocks for past messages in `msg["_full_html"]` to bypass redundant layout and string formatting overhead.
+
+## 2026-06-09 - Disk I/O Bottleneck in Timer Loop
+**Learning:** Checking for static hardware characteristics (like reading `/proc/device-tree/model` for Asahi Linux detection) directly inside a high-frequency UI timer loop (like `update_telemetry` which runs every 2 seconds) causes recurring synchronous disk I/O. This redundant blocking operation can lead to UI micro-stutters.
+**Action:** Always cache the results of static environment/hardware checks at the instance level during initialization or first use to prevent repeated, expensive disk access within rendering or telemetry loops.
