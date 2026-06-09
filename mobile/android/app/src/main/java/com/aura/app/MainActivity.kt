@@ -131,6 +131,7 @@ fun ChatScreen(
     
     val view = LocalView.current
     val context = LocalContext.current
+    val hapticHelper = remember { HapticHelper(context) }
 
     Column(
         modifier = Modifier
@@ -152,7 +153,7 @@ fun ChatScreen(
                 text = "SETTINGS",
                 color = if (showSettings) Color(0xFFD4AF37) else Color.Gray,
                 modifier = Modifier.clickable {
-                    if (hapticsEnabled) view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    if (hapticsEnabled) hapticHelper.sessionDisconnect()
                     showSettings = !showSettings
                 }.padding(horizontal = 8.dp),
                 style = MaterialTheme.typography.labelSmall
@@ -207,7 +208,7 @@ fun ChatScreen(
                 onClick = {
                     val prompt = inputText
                     if (prompt.isNotBlank()) {
-                        if (hapticsEnabled) view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        if (hapticsEnabled) hapticHelper.stateAwakening()
                         messages = messages + "USER: $prompt"
                         messages = messages + "AURA: ..." 
                         inputText = ""
@@ -216,7 +217,7 @@ fun ChatScreen(
                         context.startForegroundService(serviceIntent)
                         
                         bridge.sendPrompt(prompt) { currentStream ->
-                            if (hapticsEnabled) view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
+                            if (hapticsEnabled) hapticHelper.tokenThrum()
                             messages = messages.dropLast(1) + "AURA: $currentStream"
                         }
                     }

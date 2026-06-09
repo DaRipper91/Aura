@@ -8,6 +8,7 @@ import java.util.concurrent.Executor
 
 class BiometricHelper(private val activity: FragmentActivity) {
     private val executor: Executor = ContextCompat.getMainExecutor(activity)
+    private val hapticHelper = HapticHelper(activity)
 
     fun authenticate(onSuccess: () -> Unit) {
         val biometricManager = BiometricManager.from(activity)
@@ -22,6 +23,18 @@ class BiometricHelper(private val activity: FragmentActivity) {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
                     onSuccess()
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    hapticHelper.biometricReject()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    if (errorCode != BiometricPrompt.ERROR_USER_CANCELED) {
+                        hapticHelper.biometricReject()
+                    }
                 }
             })
 
