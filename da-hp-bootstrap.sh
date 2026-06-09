@@ -76,7 +76,7 @@ cd cachyos-repo
 pacman -Syyu --noconfirm
 pacman -S --noconfirm linux-cachyos linux-cachyos-headers
 
-# 8. OPTIMIZATION: CPU Performance Governor
+# 8. OPTIMIZATION: CPU Performance Governor & Auto-Sleep
 systemctl enable cpupower
 mkdir -p /etc/systemd/system/cpupower.service.d/
 cat <<EOT > /etc/systemd/system/cpupower.service.d/override.conf
@@ -84,6 +84,14 @@ cat <<EOT > /etc/systemd/system/cpupower.service.d/override.conf
 ExecStart=
 ExecStart=/usr/bin/cpupower frequency-set -g performance
 EOT
+
+echo "💤 Configuring Auto-Sleep (2 Hours Idle)..."
+cat <<EOT > /etc/systemd/logind.conf.d/idle.conf
+[Login]
+IdleAction=suspend
+IdleActionSec=120min
+EOT
+mkdir -p /etc/systemd/logind.conf.d
 
 # 9. OPTIMIZATION: Huge Pages for LLM Inference
 echo "vm.nr_hugepages = 1024" >> /etc/sysctl.d/99-ai-optimization.conf

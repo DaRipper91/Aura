@@ -518,6 +518,13 @@ class OllamaClient:
 
     def stream_chat(self, model: str, prompt: str, options: Optional[dict] = None) -> Generator[str, None, None]:
         url = f"{self.base_url}/api/generate"
+        
+        # 👁️ DYNAMIC VISION ROUTING
+        # If the prompt contains an image extension, route it to the vision model
+        if re.search(r'\.(jpg|jpeg|png|webp)\b', prompt, re.IGNORECASE):
+            print("[ENGINE] Image detected in prompt. Routing to Moondream...")
+            model = "moondream:latest"
+
         system_prompt = self.get_system_prompt(model)
 
         # Update History

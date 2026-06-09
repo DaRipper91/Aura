@@ -77,6 +77,41 @@ class AuraBridge(private val context: android.content.Context) {
     }
 
     /**
+     * Sends a Magic Packet to wake the DA-HP Logic Hub.
+     */
+    fun wakeLogicHub(macAddress: String) {
+        Thread {
+            try {
+                val bytes = getMacBytes(macAddress)
+                val magicPacket = ByteArray(6 + 16 * bytes.size)
+                for (i in 0..5) magicPacket[i] = 0xff.toByte()
+                var i = 6
+                while (i < magicPacket.size) {
+                    System.arraycopy(bytes, 0, magicPacket, i, bytes.size)
+                    i += bytes.size
+                }
+                
+                val inetAddress = java.net.InetAddress.getByName("255.255.255.255")
+                val packet = java.net.DatagramPacket(magicPacket, magicPacket.size, inetAddress, 9)
+                val socket = java.net.DatagramSocket()
+                socket.send(packet)
+                socket.close()
+                android.util.Log.d("AuraBridge", "Magic Packet sent to $macAddress")
+            } catch (e: Exception) {
+                android.util.Log.e("AuraBridge", "Failed to send WoL packet: ${e.message}")
+            }
+        }.start()
+    }
+    
+    private fun getMacBytes(macStr: String): ByteArray {
+        val bytes = ByteArray(6)
+        val hex = macStr.split(":", "-")
+        if (hex.size != 6) throw IllegalArgumentException("Invalid MAC address")
+        for (i in 0..5) bytes[i] = Integer.parseInt(hex[i], 16).toByte()
+        return bytes
+    }
+
+    /**
      * Pipes the prompt to the active engine (Python/Remote or Standalone/Local).
      */
     fun sendPrompt(prompt: String, model: String = "qwen2.5:7b", callback: (String) -> Unit) {
