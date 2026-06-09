@@ -22,8 +22,21 @@ Aura has transitioned from local-only inference to a distributed model:
 ### 1. Configure the Hub
 Ensure your DA-HP Logic Hub is active and reachable via Tailscale. The Hub should be running Ollama on port `11434`.
 
-### 2. Install the APK
-Download the latest `aura-pixel-debug.apk` or `aura-samsung-debug.apk` from the **[Releases](https://github.com/DaRipper91/Aura-APK/releases)** section.
+## 🚀 HARDWARE TIERS & CAPABILITIES
+
+The Android Spoke is divided into two operational tiers:
+
+### 1. Pixel Build (`app-pixel-debug.apk`) // GOD-MODE
+Designed to mimic the capabilities of `gemini-cli` directly on the device.
+- **Shizuku & Rish Integration:** Bypasses standard Android sandboxing to execute ADB-level shell commands on-device.
+- **Termux Bridge:** Can autonomously edit files, manage packages, and execute scripts within the Termux environment.
+- **Role:** Autonomous mobile engineer and deep system manager.
+
+### 2. Samsung Build (`app-samsung-debug.apk`) // THE SATELLITE
+Designed as a high-speed, secure communication interface to the Logic Hub.
+- **Pure Spoke:** Relies entirely on the DA-HP for heavy logic and tool execution.
+- **UI First:** Focuses on haptic telemetry, voice dictation, and biometric security.
+- **Role:** Standard intelligent client (similar to the official Gemini app, but governed by Aura mandates).
 
 ### 3. Connect to Logic Hub
 1. Open Aura on your Android device.

@@ -22,10 +22,10 @@ Aura is organized as a unified monorepo for seamless "Logic Hub" and "Satellite"
 - **Sentinel (Security):** Zero-trust dependency management and secure remote tool execution.
 - **Palette (UX):** High-contrast "Cyber-Monospace" visual hierarchy.
 
-## 📦 RELEASES
-Latest pre-built binaries and APKs are available in the **[`Releases/`](./Releases/)** directory:
-- `app-pixel-debug.apk`: Optimized for Tensor hardware.
-- `app-samsung-debug.apk`: Optimized for Snapdragon hardware.
+## 📦 RELEASES & HARDWARE TIERS
+Latest pre-built binaries and APKs are available in the **[`Releases/`](./Releases/)** directory. The Android Spoke is divided into two distinct capability tiers:
+- **`app-pixel-debug.apk` (God-Mode / CLI Tier):** Advanced developer interface mimicking `gemini-cli`. Integrates with **Shizuku**, **Rish**, and **Termux** for autonomous on-device file editing, shell execution, and deep system management.
+- **`app-samsung-debug.apk` (Standard / Spoke Tier):** Focused, high-speed chat and logic interface. Acts as a pure satellite for the DA-HP Logic Hub without local system manipulation.
 
 ## ⚙️ SETUP
 1. **Initialize Hub:** Run `da-hp-bootstrap.sh` on your dedicated server.
