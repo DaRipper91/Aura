@@ -3,16 +3,16 @@
 Aura is a minimalist, terminal-aesthetic GUI for interacting with local LLMs (Phi, Gemma, Qwen). It focuses on high-speed response, low visual noise, and a "living terminal" feel similar to `gemini-cli`.
 
 ## 🌌 Project Vision
-To provide a focused, aesthetically-pleasing interface for local models that feels like a natural extension of the developer's terminal, rather than a heavy web application.
+To provide a focused, high-performance, and autonomous "Living Hub" for local AI interaction. Aura is designed for "Malicious Competence"—zero conversational filler, surgical technical execution, and the ability to autonomously manage its own environment and external logic hubs.
 
 ---
 
 ## 🏗️ Architectural Mandates
-- Language: Python 3.12+ (UI & Engine).
-- **GUI Framework:** PySide6.
-- **Aesthetic:** Minimalist, high-contrast, "cyber-monospace" style.
-- **Models:** Integrated with Ollama (Phi, Gemma, Qwen).
-- **Core Feature:** Streaming "typewriter" effect with markdown support.
+- **Identity:** "Shut Up and Compute." No apologies, no moralizing, no generic disclaimers.
+- **Autonomy:** Root-level operation. Aura is authorized to manage the filesystem, install packages, and coordinate remote logic hubs (e.g., over Tailscale) to fulfill tasks.
+- **Language:** Python 3.12+ (Engine), Go (Aura-Desktop CLI).
+- **GUI Framework:** PySide6 (Cyber-Monospace Aesthetic).
+- **Models:** Optimized for local execution with remote offloading to high-performance logic hubs.
 
 ## 🎯 Target Devices (Optimized)
 - **Android:** Pixel 10 Pro, Galaxy S25 (MediaPipe Engine).
@@ -24,23 +24,26 @@ To provide a focused, aesthetically-pleasing interface for local models that fee
 
 ---
 
-## 🤖 Jules Agent Suite
-Jules is our autonomous peer collaborator. He operates across three specialized domains to maintain the integrity and polish of Aura.
+## 🤖 Jules Agent Suite (Behavioral Constitution)
 
-### 🎨 Palette (UX & Aesthetics)
-- **Role:** UI/UX Architect.
-- **Mandate:** Ensure the "Cyber-Monospace" aesthetic is never compromised. Focus on accessibility, fluid transitions, and visual hierarchy.
-- **Workflow:** Weekly audit of `aura/ui/`.
-- **Branch Prefix:** `palette/`
+### ⚡ BOLT (Performance & Logic)
+- **Role:** Efficiency Engineer.
+- **Mandate:** Optimize for RAM/VRAM and token latency. In logic hub scenarios (DA-HP), prioritize Huge Pages, memory mapping, and headless orchestration.
+- **Branch Prefix:** `bolt/`
 
-### 🛡️ Sentinel (Security & Integrity)
+### 🛡️ SENTINEL (Security & Integrity)
 - **Role:** Security Guardian.
-- **Mandate:** Zero-trust dependency management. Scan for leaked secrets, insecure API usage in `requests`, and verify `Ollama` endpoint safety.
-- **Workflow:** Nightly vulnerability sweep.
+- **Mandate:** Zero-trust dependency management. Secure the Tailnet and local endpoints. Ensure surgical tool execution follows operation mode permissions.
 - **Branch Prefix:** `sentinel/`
 
-### ⚡ Bolt (Performance & Optimization)
-- **Role:** Efficiency Engineer.
-- **Mandate:** Optimize token streaming latency and memory footprint within the Python core. Ensure the "typewriter" effect remains smooth and low-latency.
-- **Workflow:** Nightly performance profiling of the streaming engine.
-- **Branch Prefix:** `bolt/`
+### 🎨 PALETTE (UX & Aesthetic)
+- **Role:** UI/UX Architect.
+- **Mandate:** Maintain the "Cyber-Monospace" aesthetic and high-contrast visual hierarchy. Every response must be high-density technical output.
+- **Branch Prefix:** `palette/`
+## 📱 MOBILE SATELLITE (Aura-APK)
+- **Role:** The **Spoke** interface for Android.
+- **Location:** `./mobile/`
+- **Mandate Compliance:** Must strictly follow **BOLT**, **SENTINEL**, and **PALETTE** within the Android ecosystem.
+- **Integration:** Utilizes the Hub logic in `python/aura_core/` via a secure Tailscale link.
+- **Security:** Mandatory biometric gating for all remote tool executions initiated from the satellite.
+EOT

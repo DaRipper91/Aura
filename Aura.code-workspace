@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"name": "Aura // Core & Hub",
+			"path": "."
+		},
+		{
+			"name": "Aura // Mobile Satellite",
+			"path": "mobile"
+		}
+	],
+	"settings": {
+		"python.analysis.extraPaths": [
+			"./python"
+		],
+		"java.configuration.runtimes": [
+			{
+				"name": "JavaSE-21",
+				"path": "/usr/lib/jvm/java-21-openjdk",
+				"default": true
+			}
+		],
+		"kotlin.compiler.jvmTarget": "17"
+	}
+}

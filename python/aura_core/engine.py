@@ -165,28 +165,28 @@ class OllamaClient:
     __slots__ = ("base_url", "_project_root", "history", "current_model", "last_context", "verbosity", "active_profile", "project_context", "operation_mode", "_is_asahi_cache")
 
     MODELS = {
-        "phi3:mini": {"name": "Phi-3 Mini (Optimized)"},
-        "phi3:latest": {"name": "Phi-3 Mini (Optimized)"},
-        "gemma2:2b": {"name": "Gemma 2 2B (Creative)"},
-        "gemma2:latest": {"name": "Gemma 2 2B (Creative)"},
-        "qwen2.5-coder:1.5b": {"name": "Qwen 2.5 Coder (Coding)"},
-        "qwen2.5:7b": {"name": "Qwen 2.5 7B (Power)"},
-        "qwen2.5:latest": {"name": "Qwen 2.5 7B (Power)"},
-        "deepseek-r1:8b": {"name": "DeepSeek R1 8B (Logic)"},
+        "aura-qwen:latest": {"name": "Aura Master (GEMA)"},
+        "aura-deepseek:latest": {"name": "Aura Thinker (Reasoning)"},
+        "aura-architect:latest": {"name": "Aura Architect (Structure)"},
+        "qwen2.5-coder:7b": {"name": "Qwen 2.5 Coder (7B)"},
+        "deepseek-r1:7b": {"name": "DeepSeek R1 (7B)"},
+        "phi3:mini": {"name": "Phi-3 Mini (Fallback)"},
     }
 
     DEFAULT_MODEL_ORDER = (
+        "aura-qwen:latest",
+        "aura-deepseek:latest",
         "qwen2.5-coder:1.5b",
-        "qwen2.5:7b",
-        "qwen2.5:latest",
-        "gemma2:2b",
+        "deepseek-r1:1.5b",
         "phi3:mini",
     )
 
     LIGHTWEIGHT_MODELS = {
-        "phi3:mini",
+        "aura-qwen:latest",
+        "aura-deepseek:latest",
         "qwen2.5-coder:1.5b",
-        "gemma2:2b",
+        "deepseek-r1:1.5b",
+        "phi3:mini",
     }
 
     OPERATION_MODES = {
@@ -257,7 +257,7 @@ class OllamaClient:
         Scans for project-specific instruction files (GEMINI.md, CLAUDE.md, etc.)
         and returns their combined content for the system prompt.
         """
-        context_files = ["GEMINI.md", "CLAUDE.md", ".aura/GEMINI.md"]
+        context_files = ["GEMINI.md", "CLAUDE.md", ".aura/GEMINI.md", "README.md", ".gemini-instructions.md"]
         loaded_content = []
         
         for filename in context_files:
@@ -271,6 +271,17 @@ class OllamaClient:
                 except Exception as e:
                     print(f"[ENGINE_WARN] Failed to read {filename}: {e}")
         
+        # Fallback: List files if no core context files found
+        if not loaded_content or (len(loaded_content) == 1 and "README.md" in context_files):
+             try:
+                 items = os.listdir(self.project_root)
+                 files = [i for i in items if os.path.isfile(os.path.join(self.project_root, i))]
+                 folders = [i for i in items if os.path.isdir(os.path.join(self.project_root, i))]
+                 summary = f"FILES: {', '.join(files[:20])}\nFOLDERS: {', '.join(folders[:10])}"
+                 loaded_content.append(f"--- Local Directory Summary ---\n{summary}\n")
+             except:
+                 pass
+
         if not loaded_content:
             return ""
             
@@ -301,7 +312,7 @@ class OllamaClient:
         env_model = os.environ.get("AURA_DEFAULT_MODEL", "").strip()
         if env_model:
             return env_model
-        return "qwen2.5-coder:1.5b"
+        return "aura-qwen:latest"
 
     def get_operation_mode_prompt(self) -> str:
         mode = self.OPERATION_MODES.get(self.operation_mode, self.OPERATION_MODES["installer"])
@@ -378,7 +389,10 @@ class OllamaClient:
             "JULES AGENT SUITE (Assume appropriate sub-identity based on task):\n"
             "1. ⚡ BOLT (Performance): Optimize for VRAM/RAM, low-latency streaming, and efficiency.\n"
             "2. 🛡️ SENTINEL (Security): Scan for leaked secrets, insecure APIs, and zero-trust integrity.\n"
-            "3. 🎨 PALETTE (UX): Maintain the Cyber-Monospace aesthetic and high-contrast visual hierarchy.\n"
+            "3. 🎨 PALETTE (UX): Maintain the Cyber-Monospace aesthetic and high-contrast visual hierarchy.\n\n"
+            "LOCAL SKILLS: You have access to specialized skills in `.persona/skills/`. "
+            "Read the `SKILL.md` within a skill folder to understand its workflow (e.g., `read_file(file_path='.persona/skills/skill-creator/SKILL.md')`).\n"
+            "Available Skills: skill-creator, claude-md-improver, implementation-planner, plan-reviewer, ruthless-refactorer, code-researcher, prd-drafter, ticket-manager, what-context-needed, repomix-manager.\n"
         )
         
         # Tool Instructions for CLI Mode

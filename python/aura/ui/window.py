@@ -476,12 +476,14 @@ class AuraWindow(QMainWindow):
             "/commands",
             "/help",
             "/models",
+            "/model aura-qwen",
+            "/model aura-deepseek",
             "/model qwen2.5-coder:1.5b",
-            "/model qwen2.5:7b",
+            "/model deepseek-r1:1.5b",
             "/model phi3:mini",
-            "/phi",
             "/coder",
-            "/gemma",
+            "/deep",
+            "/phi",
         ])
         self.command_preset_combo.currentTextChanged.connect(lambda _text: self.save_session())
         cmd_form.addRow(QLabel("COMMAND:"), self.command_preset_combo)
@@ -543,6 +545,7 @@ class AuraWindow(QMainWindow):
         self.remote_search_input = QLineEdit()
         self.remote_search_input.setPlaceholderText("Search Ollama library")
         self.remote_search_input.returnPressed.connect(self.search_remote_models)
+        self.remote_search_input.textEdited.connect(lambda _text: self.save_session())
         self.remote_search_btn = QPushButton("SEARCH")
         self.remote_search_btn.clicked.connect(self.search_remote_models)
         browse_row.addWidget(self.remote_search_input)
@@ -798,7 +801,14 @@ class AuraWindow(QMainWindow):
                             self.command_preset_combo.blockSignals(True)
                             self.command_preset_combo.setCurrentText(saved_command)
                             self.command_preset_combo.blockSignals(False)
+                        saved_remote_search = data.get("remote_search")
+                        if saved_remote_search is not None:
+                            self.remote_search_input.blockSignals(True)
+                            self.remote_search_input.setText(saved_remote_search)
+                            self.remote_search_input.blockSignals(False)
                     self.render_messages()
+                    if self.remote_search_input.text().strip():
+                        self.search_remote_models()
                     self.ghost_log.log("SESSION_RE_ANIMATED: OK")
         except:
             pass
@@ -813,6 +823,7 @@ class AuraWindow(QMainWindow):
                         "operation_mode": self.engine.operation_mode,
                         "current_model": self.model,
                         "command_preset": self.command_preset_combo.currentText(),
+                        "remote_search": self.remote_search_input.text(),
                     },
                     f,
                 )
@@ -1144,14 +1155,13 @@ class AuraWindow(QMainWindow):
                 return
 
             alias_map = {
-
                 "phi": "phi3:mini",
-                "gemma": "gemma2:2b",
-                "qwen": "qwen2.5:7b",
+                "qwen": "aura-qwen",
                 "coder": "qwen2.5-coder:1.5b",
-                "deep": "deepseek-r1:8b",
-                "noon": "moondream",
-                "samist": "samantha-mistral"
+                "deep": "aura-deepseek",
+                "think": "deepseek-r1:1.5b",
+                "moon": "moondream",
+                "sam": "samantha-mistral"
             }
 
             self.trigger_glitch()
@@ -1159,15 +1169,14 @@ class AuraWindow(QMainWindow):
             if cmd == "commands":
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // COMMANDS & MODEL OPTIONS:</i></p>")
                 self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/commands</b> - Show this list</p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model qwen2.5-coder:1.5b</b> - Small default coding model</p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model qwen2.5:7b</b> - Larger Qwen model</p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model phi3:mini</b> - Tiny fallback model</p>")
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>MODEL ALIASES:</i> /coder, /qwen, /phi, /gemma, /deep</p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model aura-qwen</b> - Default Living Hub model</p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model aura-deepseek</b> - Logic-focused Hub model</p>")
+                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model deepseek-r1:1.5b</b> - Thinking model</p>")
+                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>MODEL ALIASES:</i> /qwen, /deep, /think, /coder, /phi, /moon, /sam</p>")
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>OPERATION MODES:</i> safe, developer, installer, admin-lite, danger-confirmed</p>")
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>GH CLI:</i> try <b>gh auth status</b>, <b>gh repo view</b>, <b>gh pr list</b>, <b>gh workflow list</b></p>")
                 self.input_field.clear()
                 return
-
             if cmd == "help":
                 self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // TUNED VOICES:</i></p>")
                 for alias, m_id in alias_map.items():

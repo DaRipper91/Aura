@@ -1,0 +1,22 @@
+{
+    "history": [
+        {
+            "role": "user",
+            "content": "IDENT_AURA // Status report. Who are you, what is your current project context, and what skills do you have available?"
+        },
+        {
+            "role": "assistant",
+            "content": "```json\n{\n  \"project_context\": \"Aura is a high-performance, autonomous agent environment optimized for Linux and Windows, designed as the \\\"Living Hub\\\" for local LLM interaction. It provides a minimalist, terminal-aesthetic interface focused on high-speed response and low visual noise.\",\n  \"current_project\": \"GEMINI.md\",\n  \"skills_available\": [\"read_file\", \"write_file\", \"replace\", \"grep_search\", \"list_directory\", \"run_shell_command\", \"aider_fix\"]\n}\n```"
+        },
+        {
+            "role": "user",
+            "content": "Hello QRight. Running with aider i see."
+        },
+        {
+            "role": "assistant",
+            "content": "Hello QRight! I'm ready to assist you with coding tasks and improving the codebase of your project. Please feel free to share any code or file you need assistance with, and I'll do my best to help you."
+        }
+    ],
+    "current_model": "aura-qwen:latest",
+    "operation_mode": "installer"
+}
