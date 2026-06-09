@@ -539,11 +539,30 @@ class AuraWindow(QMainWindow):
         pull_group.setLayout(pull_layout)
         settings_layout.addWidget(pull_group)
 
-        browse_group = QGroupBox("BROWSE_LIBRARY")
+        browse_group = QGroupBox("REMOTE LOGIC HUB")
         browse_layout = QVBoxLayout()
+        
+        # Hub IP Input
+        hub_row = QHBoxLayout()
+        hub_label = QLabel("Hub IP:")
+        hub_label.setStyleSheet("color: gray;")
+        self.hub_url_input = QLineEdit()
+        self.hub_url_input.setPlaceholderText("e.g., http://100.x.y.z:11434")
+        
+        # Load saved Hub URL
+        saved_url = os.environ.get("AURA_LOGIC_HUB_URL", "")
+        if saved_url:
+            self.hub_url_input.setText(saved_url)
+            
+        self.hub_url_input.textEdited.connect(self._update_hub_url)
+        
+        hub_row.addWidget(hub_label)
+        hub_row.addWidget(self.hub_url_input)
+        browse_layout.addLayout(hub_row)
+
         browse_row = QHBoxLayout()
         self.remote_search_input = QLineEdit()
-        self.remote_search_input.setPlaceholderText("Search Ollama library")
+        self.remote_search_input.setPlaceholderText("Search Hub/Ollama library")
         self.remote_search_input.returnPressed.connect(self.search_remote_models)
         self.remote_search_input.textEdited.connect(lambda _text: self.save_session())
         self.remote_search_btn = QPushButton("SEARCH")
@@ -806,6 +825,12 @@ class AuraWindow(QMainWindow):
                             self.remote_search_input.blockSignals(True)
                             self.remote_search_input.setText(saved_remote_search)
                             self.remote_search_input.blockSignals(False)
+                        saved_hub_url = data.get("hub_url")
+                        if saved_hub_url is not None:
+                            self.hub_url_input.blockSignals(True)
+                            self.hub_url_input.setText(saved_hub_url)
+                            self.engine.base_url = saved_hub_url or os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+                            self.hub_url_input.blockSignals(False)
                     self.render_messages()
                     if self.remote_search_input.text().strip():
                         self.search_remote_models()
@@ -824,6 +849,7 @@ class AuraWindow(QMainWindow):
                         "current_model": self.model,
                         "command_preset": self.command_preset_combo.currentText(),
                         "remote_search": self.remote_search_input.text(),
+                        "hub_url": self.hub_url_input.text(),
                     },
                     f,
                 )
@@ -868,6 +894,14 @@ class AuraWindow(QMainWindow):
                 self.search_remote_models()
         self.settings_panel.setVisible(self.settings_toggle.isChecked())
 
+    def _update_hub_url(self, text: str):
+        url = text.strip()
+        if url:
+            self.engine.base_url = url
+        else:
+            self.engine.base_url = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+        self.save_session()
+        
     def _sync_model_selector(self):
         for i in range(self.model_selector.count()):
             if self.model_mapping.get(self.model_selector.itemText(i)) == self.model:

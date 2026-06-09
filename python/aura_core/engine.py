@@ -228,9 +228,17 @@ class OllamaClient:
         "MOBILE_STEALTH": {"num_ctx": 512, "num_thread": 1, "use_mmap": False}
     }
 
-    def __init__(self, base_url: str = "http://127.0.0.1:11434"):
-        self.base_url = base_url
-        self._project_root = os.getcwd()
+    def __init__(self, base_url: str = None):
+        # Allow environment override for Hub IP, otherwise check for legacy variable, fallback to localhost
+        env_url = os.environ.get("AURA_LOGIC_HUB_URL", "").strip()
+        if env_url:
+            self.base_url = env_url
+        elif base_url:
+             self.base_url = base_url
+        else:
+             self.base_url = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+
+        self.project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
         self.current_model = self.get_default_model()
         self.last_context = None
