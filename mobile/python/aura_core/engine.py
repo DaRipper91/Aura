@@ -170,15 +170,27 @@ class ToolRegistry:
     @staticmethod
     def termux_command(args: dict) -> str:
         """
-        Executes a command inside the Termux environment via am intent or direct binary execution.
+        Executes a command inside the Termux environment via android-shizuku-mcp or fallback intent.
         Args: command.
         """
         command = args.get("command")
         if not command:
             return "Error: command is required"
         try:
-            # We can use adb/shizuku or am to broadcast to Termux's RunCommandService
-            # Example using 'am startservice':
+            # 1. Attempt persistent shell via Termux MCP Server
+            import requests
+            try:
+                response = requests.post("http://127.0.0.1:8080/execute", json={"command": command}, timeout=30)
+                if response.status_code == 200:
+                    data = response.json()
+                    output = data.get("stdout", "")
+                    if data.get("stderr"):
+                        output += "\n[STDERR]\n" + data.get("stderr")
+                    return output if output else f"MCP execution complete, exit code {data.get('exit_code', 0)}"
+            except requests.exceptions.RequestException:
+                pass # MCP server offline or unreachable, fallback to intent
+
+            # 2. Fallback to Android 'am startservice' Intent
             cmd = [
                 "am", "startservice",
                 "--user", "0",
@@ -193,9 +205,9 @@ class ToolRegistry:
                 text=True,
                 timeout=10
             )
-            return "Termux intent sent: " + result.stdout + result.stderr
+            return "Termux intent sent (MCP Offline fallback): " + result.stdout + result.stderr
         except Exception as e:
-            return f"Error executing Termux intent: {e}"
+            return f"Error executing Termux command: {e}"
 
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
@@ -518,6 +530,13 @@ class OllamaClient:
 
     def stream_chat(self, model: str, prompt: str, options: Optional[dict] = None) -> Generator[str, None, None]:
         url = f"{self.base_url}/api/generate"
+        
+        # 👁️ DYNAMIC VISION ROUTING
+        # If the prompt contains an image extension, route it to the vision model
+        if re.search(r'\.(jpg|jpeg|png|webp)\b', prompt, re.IGNORECASE):
+            print("[ENGINE] Image detected in prompt. Routing to Moondream...")
+            model = "moondream:latest"
+
         system_prompt = self.get_system_prompt(model)
 
         # Update History
