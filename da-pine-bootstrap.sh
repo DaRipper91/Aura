@@ -50,14 +50,20 @@ echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/10-wheel
 echo "🚀 Enabling Services..."
 systemctl enable --now NetworkManager sshd tailscaled
 
-# Note: Authentication must be run manually or via TS_AUTH_KEY like Da-HP
+if [ -z "$TS_AUTH_KEY" ]; then
+    echo ""
+    read -p "🔑 Paste your TS_AUTH_KEY (or press Enter for an easy web login link): " TS_AUTH_KEY
+fi
+
+LOCAL_SUBNET="192.168.1.0/24" 
+
 if [ -n "$TS_AUTH_KEY" ]; then
     echo "🔗 Authenticating Tailscale as Subnet Router..."
-    # Replace subnet with user's actual local subnet if known, default to a common one
-    LOCAL_SUBNET="192.168.1.0/24" 
     tailscale up --authkey="$TS_AUTH_KEY" --hostname="Da-Pine" --ssh --advertise-routes="$LOCAL_SUBNET" --accept-routes
 else
-    echo "⚠️  No TS_AUTH_KEY provided. Manual routing required: 'tailscale up --advertise-routes=YOUR_SUBNET/24'"
+    echo "🔗 Starting interactive login..."
+    echo "👇 TYPE THIS SHORT URL INTO YOUR MAC OR PHONE BROWSER 👇"
+    tailscale up --hostname="Da-Pine" --ssh --advertise-routes="$LOCAL_SUBNET" --accept-routes
 fi
 
 # 6. PERSISTENT SCREEN BLANKING
