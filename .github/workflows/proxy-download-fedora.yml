@@ -12,11 +12,9 @@ jobs:
     steps:
       - name: Fetch and Upload
         run: |
-          # Use a known Fedora Mobility mirror link
-          URL="https://download.fedoraproject.org/pub/fedora/linux/releases/44/Spins/aarch64/images/Fedora-KDE-Mobile-44-1.2.aarch64.raw.xz"
+          # Correct stable Fedora 44 link
+          URL="https://download.fedoraproject.org/pub/fedora/linux/releases/44/Spins/aarch64/images/Fedora-KDE-Mobile-Disk-44-1.7.aarch64.raw.xz"
           echo "Downloading $URL..."
-          # Note: Fedora links often redirect, -L is required.
-          # We use -f to fail on 404, and -sS for quiet but descriptive errors.
           curl -f -L -O "$URL"
           echo "Download complete."
           ls -lh
@@ -25,5 +23,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fedora-pinephone-mobile
-          path: Fedora-KDE-Mobile-44-1.2.aarch64.raw.xz
+          path: Fedora-KDE-Mobile-Disk-44-1.7.aarch64.raw.xz
           retention-days: 1
