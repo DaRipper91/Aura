@@ -1,71 +1,62 @@
-#!/bin/sh
-# 🌲 DA-PINE // SUB-ROUTER BOOTSTRAP SCRIPT (postmarketOS / Alpine Linux)
-# Target: PinePhone (Original/Pro) - postmarketOS Console
+#!/bin/bash
+# 🌲 DA-PINE // SUB-ROUTER BOOTSTRAP SCRIPT (Fedora 44 Mobile)
+# Target: PinePhone (Original/Pro) - Fedora Mobile
 # Role: Layer 2 Wake-on-LAN Relay & Tailscale Subnet Router
 
 set -e
 trap 'echo "❌ ERROR: Bootstrap failed at line $LINENO"' ERR
 
-echo "🌲 INITIALIZING DA-PINE BOOTSTRAP (Alpine) // SHUT UP AND COMPUTE."
+echo "🌲 INITIALIZING DA-PINE BOOTSTRAP (Fedora) // SHUT UP AND COMPUTE."
 
-# 1. HARDWARE OPTIMIZATION (Power & Heat Reduction)
-echo "🔋 Disabling Mobile Hardware..."
+# 1. GUI ASSASSINATION (Freeing RAM)
+echo "🗡️  Disabling Graphical Environment..."
+# Fedora Mobile uses Plasma Mobile or Phosh. We kill both and switch to multi-user target (tty).
+systemctl set-default multi-user.target
+systemctl stop sddm || systemctl stop phosh || true
+echo "✅ GUI disabled. System will now boot to a headless terminal."
 
-# Disable Cellular Modem (eg25-manager) on Alpine (OpenRC)
-if rc-service eg25-manager status 2>/dev/null | grep -q "started"; then
-    rc-service eg25-manager stop
-    rc-update del eg25-manager default
+# 2. HARDWARE OPTIMIZATION
+echo "🔋 Killing unnecessary mobile hardware..."
+# Disable Modem (Saves heat/power)
+if systemctl is-active --quiet eg25-manager; then
+    systemctl disable --now eg25-manager
     echo "✅ EG25 Modem Manager disabled."
 fi
 
-# 2. SYSTEM TUNING
+# 3. SYSTEM TUNING
 echo "⚡ Tuning sysctl for Routing..."
-# Enable IP Forwarding for Tailscale Subnet Routing
-echo 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/99-tailscale.conf
-echo 'net.ipv6.conf.all.forwarding = 1' >> /etc/sysctl.d/99-tailscale.conf
+# Enable IP Forwarding
+cat <<EOF > /etc/sysctl.d/99-tailscale.conf
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+EOF
 sysctl -p /etc/sysctl.d/99-tailscale.conf
 
-# 3. BASE PACKAGES
+# 4. BASE PACKAGES (Fedora / DNF)
 echo "📥 Installing Core Routing Packages..."
-# Alpine uses apk instead of pacman
-apk update
-apk add tailscale fish openssh htop networkmanager sudo
+dnf install -y tailscale fish htop NetworkManager sudo
+dnf remove -y firefox evolution maps rhythmbox # Strip mobile bloat
 
-# 4. HARDENED SSH & USER SETUP
+# 5. HARDENED SSH & USER SETUP
 echo "🔑 Configuring SSH and Users..."
-# pmOS default user is 'user', we'll set up 'daripper'
-if ! id "daripper" >/dev/null 2>&1; then
-    adduser -D -s /usr/bin/fish daripper
-    addgroup daripper wheel
+# Ensure 'daripper' exists with password '0'
+if ! id "daripper" &>/dev/null; then
+    useradd -m -G wheel -s /usr/bin/fish daripper
 fi
-
-# Set requested passwords for seamless sudo
 echo "root:0" | chpasswd
 echo "daripper:0" | chpasswd
 
-# Lock down the default 'user' account if it exists
-if id "user" >/dev/null 2>&1; then
-    echo "user:$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)" | chpasswd
-fi
-
 # Lock down SSH
-sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
 
-# Sudoers
-echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/10-wheel
-
-# 5. TAILSCALE SETUP
+# 6. TAILSCALE SETUP
 echo "🚀 Enabling Services..."
-rc-update add networkmanager default
-rc-update add sshd default
-rc-update add tailscale default
-rc-service tailscale start
+systemctl enable --now NetworkManager sshd tailscaled
 
 if [ -z "$TS_AUTH_KEY" ]; then
     echo ""
-    echo "🔑 Paste your TS_AUTH_KEY (or press Enter for an easy web login link): "
-    read TS_AUTH_KEY
+    read -p "🔑 Paste your TS_AUTH_KEY (or press Enter for an easy web login link): " TS_AUTH_KEY
 fi
 
 LOCAL_SUBNET="192.168.1.0/24" 
@@ -79,16 +70,22 @@ else
     tailscale up --hostname="Da-Pine" --ssh --advertise-routes="$LOCAL_SUBNET" --accept-routes
 fi
 
-# 6. PERSISTENT SCREEN BLANKING
-# The screen backlight stays on in tty. We use a local.d script for OpenRC.
+# 7. PERSISTENT SCREEN BLANKING
 echo "🖥️ Configuring Headless Screen Blanking..."
-cat <<EOF > /etc/local.d/pinephone-screen-off.start
-#!/bin/sh
-echo 0 > /sys/class/backlight/backlight/brightness || true
-EOF
-chmod +x /etc/local.d/pinephone-screen-off.start
-rc-update add local default
+cat <<EOF > /etc/systemd/system/pinephone-screen-off.service
+[Unit]
+Description=Disable PinePhone Backlight for Headless Mode
+After=multi-user.target
 
-echo "✅ DA-PINE BOOTSTRAP COMPLETE."
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo 0 > /sys/class/backlight/backlight/brightness || true'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable pinephone-screen-off.service
+
+echo "✅ DA-PINE FEDORA BOOTSTRAP COMPLETE."
 echo "1. Reboot the device."
 echo "2. SHUT UP AND COMPUTE."
