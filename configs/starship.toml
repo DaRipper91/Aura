@@ -1,0 +1,50 @@
+# 🌌 AURA // STARSHIP CONFIG
+# Aesthetic: Obsidian / Gold / Purple
+
+format = """
+[](#3b4252)\
+$os\
+$username\
+[](bg:#D4AF37 fg:#3b4252)\
+$directory\
+[](fg:#D4AF37 bg:#8833FF)\
+$git_branch\
+$git_status\
+[](fg:#8833FF bg:#0F0F0F)\
+$character\
+"""
+
+# Disable the blank line at the start of the prompt
+add_newline = false
+
+[os]
+disabled = false
+style = "bg:#3b4252 fg:#E0E0E0"
+
+[os.symbols]
+Arch = "󰣇 "
+Alpine = " "
+
+[username]
+show_always = true
+style_user = "bg:#3b4252 fg:#E0E0E0"
+format = '[$user]($style)'
+
+[directory]
+style = "bg:#D4AF37 fg:#0F0F0F"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[git_branch]
+symbol = " "
+style = "bg:#8833FF fg:#E0E0E0"
+format = '[ $symbol$branch ]($style)'
+
+[git_status]
+style = "bg:#8833FF fg:#E0E0E0"
+format = '[$all_status$ahead_behind ]($style)'
+
+[character]
+success_symbol = "[ 󰚩 ](bold fg:#8833FF)"
+error_symbol = "[ 󰚩 ](bold fg:#E03131)"
