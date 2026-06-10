@@ -3,63 +3,14 @@ name: Build DA-HP Arch ISO
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'DA-HP-ISO/**'
-      - 'da-hp-bootstrap.sh'
-      - '.github/workflows/da-hp-iso.yml'
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-      options: --privileged
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm archiso libisoburn mtools squashfs-tools
-
-      - name: Inject Tailscale Auth Key into Bootstrap
-        env:
-          TS_AUTH_KEY: ${{ secrets.TS_AUTH_KEY }}
-        if: ${{ secrets.TS_AUTH_KEY != '' }}
-        run: |
-          # Bake the secret into the bootstrap script for zero-touch ISOs
-          # We replace the variable reference with the actual secret string
-          sed -i "s/\$TS_AUTH_KEY/$TS_AUTH_KEY/g" da-hp-bootstrap.sh
-          # Also ensure the check 'if [ -n "$TS_AUTH_KEY" ]' becomes 'if [ -n "key" ]'
-          # This happens automatically with the sed above.
-
-      - name: Build ISO
-        run: |
-          mkdir -p work out
-          mkarchiso -v -w ./work -o ./out ./DA-HP-ISO
-
-      - name: Upload ISO Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aura-logic-hub-iso
-          path: out/*.iso
-
-      - name: Update Rolling Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
-        with:
-          files: out/*.iso
-          tag_name: rolling-release
-          name: "Aura // Latest Rolling Build"
-          body: "Automated DA-HP ISO build from branch: ${{ github.ref_name }} (Commit: ${{ github.sha }})"
-          generate_release_notes: true
-          draft: false
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test Step
+        run: echo "YAML is parsing."
