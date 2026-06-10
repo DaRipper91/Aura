@@ -12,14 +12,16 @@ jobs:
     steps:
       - name: Fetch and Upload
         run: |
-          URL="https://images.postmarketos.org/pine64-pinephone/v25.12/console/postmarketOS-v25.12-pine64-pinephone-console.img.xz"
+          # Use the exact stable 2026-06 service pack link
+          URL="https://images.postmarketos.org/bport/v25.12/pine64-pinephone/console/20260601-1052/20260601-1052-postmarketos-v25.12-console-pine64-pinephone.img.xz"
           echo "Downloading $URL..."
-          curl -L -O "$URL"
+          curl -f -L -O "$URL"
           echo "Download complete."
+          ls -lh
           
       - name: Upload to GitHub
         uses: actions/upload-artifact@v4
         with:
           name: pmos-pinephone-console
-          path: postmarketOS-v25.12-pine64-pinephone-console.img.xz
+          path: 20260601-1052-postmarketos-v25.12-console-pine64-pinephone.img.xz
           retention-days: 1
