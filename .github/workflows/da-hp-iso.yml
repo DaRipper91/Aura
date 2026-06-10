@@ -9,11 +9,12 @@ on:
       - '.github/workflows/da-hp-iso.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     container:
       image: archlinux:latest
       options: --privileged
@@ -28,18 +29,19 @@ jobs:
           pacman -S --noconfirm archiso libisoburn mtools squashfs-tools
 
       - name: Inject Tailscale Auth Key into Bootstrap
-        if: "${{ secrets.TS_AUTH_KEY != '' }}"
+        env:
+          TS_AUTH_KEY: ${{ secrets.TS_AUTH_KEY }}
+        if: ${{ secrets.TS_AUTH_KEY != '' }}
         run: |
-          # Inject the secret into the bootstrap script so it's baked into the ISO
-          sed -i 's/if \[ -n "$TS_AUTH_KEY" \]; then/if [ -n "${{ secrets.TS_AUTH_KEY }}" ]; then/' da-hp-bootstrap.sh
-          sed -i 's/TS_AUTH_KEY=$TS_AUTH_KEY/TS_AUTH_KEY=${{ secrets.TS_AUTH_KEY }}/' da-hp-bootstrap.sh
-          # Note: We use sed carefully to replace the environment variable check with the actual secret
-          # This ensures the ISO re-authenticates automatically on boot.
+          # Bake the secret into the bootstrap script for zero-touch ISOs
+          # We replace the variable reference with the actual secret string
+          sed -i "s/\$TS_AUTH_KEY/$TS_AUTH_KEY/g" da-hp-bootstrap.sh
+          # Also ensure the check 'if [ -n "$TS_AUTH_KEY" ]' becomes 'if [ -n "key" ]'
+          # This happens automatically with the sed above.
 
       - name: Build ISO
         run: |
           mkdir -p work out
-          # Use our custom profile in DA-HP-ISO
           mkarchiso -v -w ./work -o ./out ./DA-HP-ISO
 
       - name: Upload ISO Artifact
