@@ -1,3 +1,0 @@
-[console_scripts]
-aura = aura_cli:run_cli
-aura-gui = aura.main:main

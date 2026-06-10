@@ -30,3 +30,7 @@ python/aura/ui/fonts/*.zip
 .jules/
 GEMINI.md
 MEMORY.md
+aura-brain
+python/aura.egg-info
+mobile/python/aura.egg-info
+__pycache__/
