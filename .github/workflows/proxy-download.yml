@@ -12,10 +12,16 @@ jobs:
     steps:
       - name: Fetch and Upload
         run: |
-          # Use the exact stable 2026-06 service pack link
-          URL="https://images.postmarketos.org/bport/v25.12/pine64-pinephone/console/20260601-1052/20260601-1052-postmarketos-v25.12-console-pine64-pinephone.img.xz"
-          echo "Downloading $URL..."
-          curl -f -L -O "$URL"
+          BASE_URL="https://images.postmarketos.org/bport/v25.12/pine64-pinephone/console/"
+          echo "Scraping $BASE_URL for latest build..."
+          # Find the latest date-formatted directory (e.g., 20260601-1052/)
+          LATEST_DIR=$(curl -s "$BASE_URL" | grep -oE '[0-9]{8}-[0-9]{4}/' | sort -V | tail -n 1)
+          FULL_URL="${BASE_URL}${LATEST_DIR}"
+          # Find the .img.xz file in that directory
+          FILE=$(curl -s "$FULL_URL" | grep -oE '[^"]+\.img\.xz' | head -n 1)
+          
+          echo "Downloading ${FULL_URL}${FILE}..."
+          curl -f -L -O "${FULL_URL}${FILE}"
           echo "Download complete."
           ls -lh
           
@@ -23,5 +29,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pmos-pinephone-console
-          path: 20260601-1052-postmarketos-v25.12-console-pine64-pinephone.img.xz
+          path: "*.img.xz"
           retention-days: 1
