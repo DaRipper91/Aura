@@ -9,7 +9,8 @@ bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-ia32.systemd-boot.
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_permissions=(
-  [etc/shadow]="0:0:400"
-  [root]="0:0:750"
-  [usr/local/bin/aura-init.sh]="0:0:755"
+  ["/etc/shadow"]="0:0:400"
+  ["/root"]="0:0:750"
+  ["/usr/local/bin/aura-init.sh"]="0:0:755"
+  ["/usr/local/bin/da-hp-bootstrap.sh"]="0:0:755"
 )

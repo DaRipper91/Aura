@@ -34,9 +34,12 @@ jobs:
         if: env.TS_AUTH_KEY != ''
         run: |
           # Bake the secret into the bootstrap script
-          # We use single quotes for the sed to avoid shell expansion of the key during injection
-          # and replace the variable reference with the actual secret string
           sed -i "s/\$TS_AUTH_KEY/${TS_AUTH_KEY}/g" da-hp-bootstrap.sh
+          
+          # Copy the script into the ISO filesystem
+          mkdir -p DA-HP-ISO/airootfs/usr/local/bin
+          cp da-hp-bootstrap.sh DA-HP-ISO/airootfs/usr/local/bin/da-hp-bootstrap.sh
+          chmod +x DA-HP-ISO/airootfs/usr/local/bin/da-hp-bootstrap.sh
 
       - name: Build ISO
         run: |
