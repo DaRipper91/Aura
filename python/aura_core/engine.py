@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import shlex
 import glob
 from typing import Generator, Optional, List, Dict
 from aura_core.mandates import aura_component
@@ -94,9 +95,10 @@ class ToolRegistry:
         if not command:
             return "Error: command is required"
         try:
+            # Prevent command injection by avoiding shell=True
+            parsed_command = shlex.split(command)
             result = subprocess.run(
-                command,
-                shell=True,
+                parsed_command,
                 capture_output=True,
                 text=True,
                 timeout=30
