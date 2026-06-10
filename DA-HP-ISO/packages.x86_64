@@ -1,6 +1,7 @@
 base
 base-devel
 linux-firmware
+intel-ucode
 fish
 git
 openssh
@@ -15,6 +16,12 @@ vim
 nano
 sudo
 networkmanager
+iwd
+rfkill
+pciutils
+usbutils
+fzf
+starship
 curl
 wget
 tar

@@ -40,6 +40,11 @@ To provide a focused, high-performance, and autonomous "Living Hub" for local AI
 - **Role:** UI/UX Architect.
 - **Mandate:** Maintain the "Cyber-Monospace" aesthetic and high-contrast visual hierarchy. Every response must be high-density technical output.
 - **Branch Prefix:** `palette/`
+
+### 🛠️ FORGE (Infrastructure & Maintenance)
+- **Role:** System & Logistics Engineer.
+- **Mandate:** Maintain the Da-HP Logic Hub. Orchestrate the `da-hp-bootstrap.sh` lifecycle, manage hardware-specific tuning (Arch Zen, Huge Pages), and monitor health across the Tailnet. Ensure the "Living Hub" is robust and re-provisionable.
+- **Branch Prefix:** `forge/`
 ## 📱 MOBILE SATELLITE (Aura-APK)
 - **Role:** The **Spoke** interface for Android.
 - **Location:** `./mobile/`

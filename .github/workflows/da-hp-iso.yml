@@ -1,0 +1,63 @@
+name: Build DA-HP Arch ISO
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'DA-HP-ISO/**'
+      - 'da-hp-bootstrap.sh'
+      - '.github/workflows/da-hp-iso.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm archiso libisoburn mtools squashfs-tools
+
+      - name: Inject Tailscale Auth Key into Bootstrap
+        if: "${{ secrets.TS_AUTH_KEY != '' }}"
+        run: |
+          # Inject the secret into the bootstrap script so it's baked into the ISO
+          sed -i 's/if \[ -n "$TS_AUTH_KEY" \]; then/if [ -n "${{ secrets.TS_AUTH_KEY }}" ]; then/' da-hp-bootstrap.sh
+          sed -i 's/TS_AUTH_KEY=$TS_AUTH_KEY/TS_AUTH_KEY=${{ secrets.TS_AUTH_KEY }}/' da-hp-bootstrap.sh
+          # Note: We use sed carefully to replace the environment variable check with the actual secret
+          # This ensures the ISO re-authenticates automatically on boot.
+
+      - name: Build ISO
+        run: |
+          mkdir -p work out
+          # Use our custom profile in DA-HP-ISO
+          mkarchiso -v -w ./work -o ./out ./DA-HP-ISO
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-logic-hub-iso
+          path: out/*.iso
+
+      - name: Update Rolling Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          files: out/*.iso
+          tag_name: rolling-release
+          name: "Aura // Latest Rolling Build"
+          body: "Automated DA-HP ISO build from branch: ${{ github.ref_name }} (Commit: ${{ github.sha }})"
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
