@@ -35,8 +35,10 @@ echo "🔑 Configuring SSH and Users..."
 if ! id "daripper" &>/dev/null; then
     useradd -m -G wheel -s /usr/bin/fish daripper
 fi
-# Randomize root and alarm passwords
-echo "root:$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)" | chpasswd
+# Set requested passwords for seamless sudo
+echo "root:0" | chpasswd
+echo "daripper:0" | chpasswd
+# Lock down the default alarm user
 echo "alarm:$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)" | chpasswd
 
 # Lock down SSH
