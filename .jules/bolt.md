@@ -9,3 +9,7 @@
 ## 2026-06-09 - Disk I/O Bottleneck in Timer Loop
 **Learning:** Checking for static hardware characteristics (like reading `/proc/device-tree/model` for Asahi Linux detection) directly inside a high-frequency UI timer loop (like `update_telemetry` which runs every 2 seconds) causes recurring synchronous disk I/O. This redundant blocking operation can lead to UI micro-stutters.
 **Action:** Always cache the results of static environment/hardware checks at the instance level during initialization or first use to prevent repeated, expensive disk access within rendering or telemetry loops.
+
+## 2026-06-12 - Unbounded QTextDocument Memory Leak in High-Frequency Logs
+**Learning:** Appending log lines to a `QTextEdit` (like `GhostLogArea`) without limits inside a high-frequency timer loop (e.g., a 2-second telemetry timer) causes the underlying `QTextDocument` to grow infinitely. This leads to an unbounded memory leak and O(N) layout degradation over long sessions.
+**Action:** Always call `self.document().setMaximumBlockCount(N)` on read-only logging widgets in PySide6 to cap the memory footprint and prevent performance degradation.

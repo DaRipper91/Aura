@@ -33,6 +33,10 @@ class GhostLogArea(QTextEdit):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
+        # ⚡ BOLT OPTIMIZATION: Prevent O(N) memory leak and layout degradation
+        # Cap the number of log blocks since it updates very frequently
+        self.document().setMaximumBlockCount(100)
+
     def log(self, message: str):
         timestamp = time.strftime("%H:%M:%S")
         safe_msg = html.escape(message)
