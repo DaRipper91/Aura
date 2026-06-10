@@ -8,9 +8,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: "--privileged"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Test Step
-        run: echo "YAML is parsing."
+      - name: Test Container
+        run: |
+          pacman -Sy --noconfirm
+          echo "Container is working and has network access."
