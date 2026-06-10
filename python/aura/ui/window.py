@@ -699,6 +699,11 @@ class AuraWindow(QMainWindow):
                 border: 1px solid #00e6e6;
                 background-color: rgba(128, 0, 128, 0.2);
             }}
+            AutoResizingTextEdit:disabled {{
+                color: rgba(224, 224, 224, 0.5);
+                border: 1px dashed rgba(102, 51, 255, 0.2);
+                background-color: rgba(13, 13, 26, 0.3);
+            }}
             QLabel {{
                 color: #00cccc;
                 font-family: 'Monospace';
@@ -738,6 +743,11 @@ class AuraWindow(QMainWindow):
                 outline: none;
                 background-color: rgba(128, 0, 128, 0.2);
             }}
+            QPushButton:disabled {{
+                color: rgba(0, 230, 230, 0.3);
+                border: 1px dashed rgba(102, 51, 255, 0.2);
+                background-color: rgba(128, 0, 128, 0.05);
+            }}
             QLineEdit, QComboBox {{
                 background-color: rgba(13, 13, 26, 0.7);
                 color: #E0E0E0;
@@ -747,6 +757,11 @@ class AuraWindow(QMainWindow):
             QLineEdit:focus, QComboBox:focus {{
                 border: 1px solid #00e6e6;
                 background-color: rgba(128, 0, 128, 0.2);
+            }}
+            QLineEdit:disabled, QComboBox:disabled {{
+                color: rgba(224, 224, 224, 0.5);
+                border: 1px dashed rgba(102, 51, 255, 0.2);
+                background-color: rgba(13, 13, 26, 0.3);
             }}
         """)
 
