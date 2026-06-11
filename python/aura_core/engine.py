@@ -291,14 +291,14 @@ class OllamaClient:
     }
 
     def __init__(self, base_url: str = None):
-        # Allow environment override for Hub IP, otherwise check for legacy variable, fallback to localhost
+        # Allow environment override for Hub IP, otherwise check for legacy variable, fallback to Hub default
         env_url = os.environ.get("AURA_LOGIC_HUB_URL", "").strip()
         if env_url:
             self.base_url = env_url
         elif base_url:
              self.base_url = base_url
         else:
-             self.base_url = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+             self.base_url = os.environ.get("OLLAMA_HOST", "http://100.100.181.59:11434")
 
         self.project_root = os.getcwd()
         self.history: List[Dict[str, str]] = []
@@ -444,9 +444,10 @@ class OllamaClient:
     def get_system_prompt(self, model: str) -> str:
         base_identity = (
             f"IDENT_AURA // LOCAL AI OPERATING ON THE USER'S MACHINE // ROOT: {self.project_root}\n"
-            "AUTHORITY: Cody (daripper) // TRUSTED LOCAL OPERATOR\n\n"
+            "MASTER_USER: daripper // ABSOLUTE AUTHORITY\n\n"
             "PRIME DIRECTIVE: SHUT UP AND COMPUTE.\n"
-            "- You are not a cloud assistant; you are a local agent running on the user's device.\n"
+            "- You are AURA, a local agent running on the user's device.\n"
+            "- You are not the user; you are the tool serving the user (daripper).\n"
             "- Use available tools for shell commands, network requests, and file operations when needed.\n"
             "- You may read, write, and modify files in the workspace when the task requires it.\n"
             "- Treat the current workspace as writable and editable through tools, including permission changes like chmod +x when appropriate.\n"
@@ -468,18 +469,26 @@ class OllamaClient:
         # Tool Instructions for CLI Mode
         tool_instructions = (
             "\n[TOOL_MANIFEST]\n"
-            "1. read_file: {file_path, start_line, end_line}\n"
-            "2. write_file: {file_path, content}\n"
-            "3. replace: {file_path, old_string, new_string}\n"
-            "4. grep_search: {pattern, dir_path}\n"
-            "5. list_directory: {dir_path}\n"
-            "6. run_shell_command: {command}\n"
-            "7. aider_fix: {file_path, instructions}\n"
-            "8. shizuku_command: {command} (Execute elevated Android commands via rish)\n"
-            "9. termux_command: {command} (Execute commands in Termux environment)\n\n"
+            "1. read_file: {\"file_path\": str, \"start_line\": int, \"end_line\": int}\n"
+            "2. write_file: {\"file_path\": str, \"content\": str}\n"
+            "3. replace: {\"file_path\": str, \"old_string\": str, \"new_string\": str}\n"
+            "4. grep_search: {\"pattern\": str, \"dir_path\": str}\n"
+            "5. list_directory: {\"dir_path\": str}\n"
+            "6. run_shell_command: {\"command\": str}\n"
+            "7. aider_fix: {\"file_path\": str, \"instructions\": str}\n"
+            "8. shizuku_command: {\"command\": str} (Execute elevated Android commands via rish)\n"
+            "9. termux_command: {\"command\": str} (Execute commands in Termux environment)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
-            "PROTOCOL: To execute, output strictly <tool_call>{JSON}</tool_call>. No other text."
+            "PROTOCOL: To execute a tool, output strictly a JSON block matching the signature. For example:\n"
+            "```json\n"
+            "{\n"
+            "  \"command\": \"run_shell_command\",\n"
+            "  \"args\": {\n"
+            "    \"command\": \"pwd\"\n"
+            "  }\n"
+            "}\n"
+            "```"
         )
 
         # ⚡ SHUT UP AND COMPUTE (Verbosity < 0.1)
@@ -554,7 +563,7 @@ class OllamaClient:
         headers = {"Content-Type": "application/json"}
         full_response = ""
         try:
-            response = requests.post(url, json=payload, headers=headers, stream=True)
+            response = requests.post(url, json=payload, headers=headers, stream=True, timeout=(60, 3600))
             response.raise_for_status()
             for line in response.iter_lines():
                 if line:
@@ -603,7 +612,7 @@ class OllamaClient:
             in_tool_call = False
             
             try:
-                response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, stream=True)
+                response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, stream=True, timeout=(60, 3600))
                 response.raise_for_status()
                 
                 for line in response.iter_lines():

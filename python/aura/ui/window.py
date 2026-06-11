@@ -100,27 +100,6 @@ class AudioVisualizer(QWidget):
             color.setAlphaF(0.6)
             painter.fillRect(i * w + 2, y, w - 4, h, color)
 
-class PullWorker(QThread):
-    finished = Signal(bool, str)
-
-    def __init__(self, model_name: str):
-        super().__init__()
-        self.model_name = model_name
-
-    def run(self):
-        try:
-            process = subprocess.run(
-                ["ollama", "pull", self.model_name],
-                capture_output=True,
-                text=True
-            )
-            if process.returncode == 0:
-                self.finished.emit(True, f"Successfully pulled {self.model_name}")
-            else:
-                self.finished.emit(False, f"Failed to pull {self.model_name}: {process.stderr.strip()}")
-        except Exception as e:
-            self.finished.emit(False, str(e))
-
 class ChatWorker(QThread):
     chunk_received = Signal(str)
     finished = Signal()
@@ -182,14 +161,12 @@ class AuraWindow(QMainWindow):
         "font_size_slider", "dir_label", "dir_btn", "messages",
         "pending_message", "current_response_text", "worker", "workspace_label",
         "model_selector", "model_mapping", "discover_btn", "models_toggle",
-        "models_panel", "models_list", "pull_input", "pull_btn", "pull_worker",
+        "models_panel", "models_list", "hub_url_input", "debug_toggle",
         "visualizer", "ghost_log", "power_stripe", "glitch_timer", "saturation",
         "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing",
         "available_fonts", "verb_label", "verb_slider",
         "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider",
-        "last_render_time", "remote_search_input", "remote_search_btn",
-        "remote_models_list", "remote_pull_btn", "remote_models",
-        "operation_mode_combo", "command_preset_combo", "commands_btn"
+        "last_render_time", "operation_mode_combo", "command_preset_combo", "commands_btn"
     )
 
     def get_git_branch(self, path):
@@ -201,82 +178,6 @@ class AuraWindow(QMainWindow):
         except:
             return ""
 
-    def resolve_ollama_home(self) -> str:
-        override = os.environ.get("AURA_OLLAMA_HOME", "").strip()
-        if override:
-            runtime_home = os.path.abspath(os.path.expanduser(override))
-            os.makedirs(runtime_home, exist_ok=True)
-            return runtime_home
-
-        user_home = os.path.expanduser("~")
-        if user_home and os.access(user_home, os.W_OK):
-            return user_home
-
-        runtime_home = os.path.join(tempfile.gettempdir(), "aura-ollama-home")
-        os.makedirs(runtime_home, exist_ok=True)
-        return runtime_home
-
-    def ensure_ollama_running(self):
-        try:
-            import requests
-            requests.get("http://127.0.0.1:11434/", timeout=1)
-            return True
-        except Exception:
-            pass
-
-        runtime_home = self.resolve_ollama_home()
-        runtime_env = os.environ.copy()
-        runtime_env["HOME"] = runtime_home
-
-        models_dir = os.environ.get("OLLAMA_MODELS")
-        if not models_dir:
-            models_dir = os.path.join(runtime_home, ".ollama", "models")
-            runtime_env["OLLAMA_MODELS"] = models_dir
-
-        print(f"OLLAMA // Starting server with HOME={runtime_home}")
-        print(f"OLLAMA // Models directory: {models_dir}")
-
-        try:
-            process = subprocess.Popen(
-                ["ollama", "serve"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                env=runtime_env,
-                text=True,
-            )
-        except FileNotFoundError as exc:
-            print("OLLAMA // Startup error: Ollama binary not found. Install Ollama and ensure it is on PATH.")
-            return False
-
-        last_error = ""
-        for _ in range(20):
-            try:
-                requests.get("http://127.0.0.1:11434/", timeout=1)
-                return True
-            except Exception:
-                if process.poll() is not None:
-                    break
-                time.sleep(0.25)
-
-        if process.poll() is None:
-            process.terminate()
-            try:
-                _, last_error = process.communicate(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                _, last_error = process.communicate()
-        else:
-            _, last_error = process.communicate()
-
-        last_error = (last_error or "").strip()
-        if last_error:
-            print(f"OLLAMA // Startup error: {last_error}")
-        print(
-            "OLLAMA // Startup error: Ollama failed to start. If your home directory is read-only, "
-            "set AURA_OLLAMA_HOME to a writable path or OLLAMA_MODELS to a writable models directory."
-        )
-        return False
-
     def __init__(self):
         super().__init__()
         self.check_mandates() # Decorator enforced method
@@ -287,25 +188,26 @@ class AuraWindow(QMainWindow):
         icon_path = os.path.join(os.path.dirname(__file__), "icon.svg")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
-        
-        # 🚀 AUTO-START OLLAMA
-        self.ollama_ready = self.ensure_ollama_running()
-        
-        # Initialize Engine
+
+        # Initialize Engine (Defaulting to Remote Hub via Tailscale)
         self.engine = OllamaClient()
+        self.ollama_ready = True # We assume the Hub is active
+
+        # Prefer Qwen-Coder first, then others from the Hub.
         available_tags = [m['name'] for m in self.engine.get_available_models()]
-        
-        # Prefer Qwen first, then lighter local fallbacks.
-        priority_models = list(OllamaClient.DEFAULT_MODEL_ORDER)
+        priority_models = ["qwen2.5-coder:7b", "aura-qwen:latest", "aura-architect:latest"]
         self.model = None
         for p in priority_models:
             if p in available_tags:
                 self.model = p
                 break
-        
+
+        if not self.model and available_tags:
+            self.model = available_tags[0]
+
         if not self.model:
-            self.model = available_tags[0] if available_tags else self.engine.get_default_model()
-        
+            self.model = "qwen2.5-coder:7b" # Force a default even if offline
+
         lightweight_models = [model for model in available_tags if self.engine.is_lightweight_model(model)]
         self.models = lightweight_models if lightweight_models else (available_tags if available_tags else [self.model])
         self.remote_models = []
@@ -359,7 +261,12 @@ class AuraWindow(QMainWindow):
         self.abort_btn.clicked.connect(self.abort_generation)
         self.abort_btn.setVisible(False)
         header.addWidget(self.abort_btn)
-        
+
+        self.debug_toggle = QPushButton("DEBUG")
+        self.debug_toggle.setCheckable(True)
+        self.debug_toggle.setStyleSheet("color: #00e6e6; font-weight: bold; border: 1px solid #00e6e6; padding: 2px 10px;")
+        header.addWidget(self.debug_toggle)
+
         self.models_toggle = QPushButton("MODELS")
         self.models_toggle.setCheckable(True)
         self.models_toggle.clicked.connect(self.toggle_models)
@@ -389,7 +296,7 @@ class AuraWindow(QMainWindow):
         footer.addWidget(self.workspace_label)
         footer.addStretch()
         
-        self.telemetry_label = QLabel("NODE: ASAHI // TPS: 0.0 // VRAM: 0.0")
+        self.telemetry_label = QLabel("NODE: HUB // TPS: 0.0 // VRAM: 0.0")
         self.telemetry_label.setStyleSheet("color: #6633FF; font-family: 'Monospace'; font-size: 10px;")
         footer.addWidget(self.telemetry_label)
         
@@ -457,11 +364,6 @@ class AuraWindow(QMainWindow):
         self.sat_slider.valueChanged.connect(self.update_saturation)
         c_form.addRow(self.sat_label, self.sat_slider)
         
-        self.profile_combo = QComboBox()
-        self.profile_combo.addItems(list(OllamaClient.PROFILES.keys()))
-        self.profile_combo.currentTextChanged.connect(self.update_profile)
-        c_form.addRow(QLabel("PROFILE:"), self.profile_combo)
-
         console_group.setLayout(c_form)
         settings_layout.addWidget(console_group)
 
@@ -531,18 +433,6 @@ class AuraWindow(QMainWindow):
         ws_group.setLayout(ws_layout)
         settings_layout.addWidget(ws_group)
 
-        # 4. Add Model
-        pull_group = QGroupBox("ADD_MODEL")
-        pull_layout = QHBoxLayout()
-        self.pull_input = QLineEdit()
-        self.pull_input.setPlaceholderText("e.g. llama3")
-        self.pull_btn = QPushButton("PULL")
-        self.pull_btn.clicked.connect(self.pull_model)
-        pull_layout.addWidget(self.pull_input)
-        pull_layout.addWidget(self.pull_btn)
-        pull_group.setLayout(pull_layout)
-        settings_layout.addWidget(pull_group)
-
         browse_group = QGroupBox("REMOTE LOGIC HUB")
         browse_layout = QVBoxLayout()
         
@@ -563,41 +453,6 @@ class AuraWindow(QMainWindow):
         hub_row.addWidget(hub_label)
         hub_row.addWidget(self.hub_url_input)
         browse_layout.addLayout(hub_row)
-
-        browse_row = QHBoxLayout()
-        self.remote_search_input = QLineEdit()
-        self.remote_search_input.setPlaceholderText("Search Hub/Ollama library")
-        self.remote_search_input.returnPressed.connect(self.search_remote_models)
-        self.remote_search_input.textEdited.connect(lambda _text: self.save_session())
-        self.remote_search_btn = QPushButton("SEARCH")
-        self.remote_search_btn.clicked.connect(self.search_remote_models)
-        browse_row.addWidget(self.remote_search_input)
-        browse_row.addWidget(self.remote_search_btn)
-        browse_layout.addLayout(browse_row)
-
-        self.remote_models_list = QListWidget()
-        self.remote_models_list.setStyleSheet("""
-            QListWidget {
-                background-color: #0F0F0F;
-                color: #00e6e6;
-                border: 1px solid #1A1A1A;
-                font-family: 'Monospace';
-                font-size: 10px;
-            }
-            QListWidget:focus {
-                border: 1px solid #00e6e6;
-            }
-            QListWidget::item:selected {
-                background-color: #2D1B4E;
-            }
-        """)
-        browse_layout.addWidget(self.remote_models_list)
-
-        remote_btn_row = QHBoxLayout()
-        self.remote_pull_btn = QPushButton("PULL SELECTED")
-        self.remote_pull_btn.clicked.connect(self.pull_selected_remote_model)
-        remote_btn_row.addWidget(self.remote_pull_btn)
-        browse_layout.addLayout(remote_btn_row)
 
         browse_group.setLayout(browse_layout)
         settings_layout.addWidget(browse_group)
@@ -839,20 +694,13 @@ class AuraWindow(QMainWindow):
                             self.command_preset_combo.blockSignals(True)
                             self.command_preset_combo.setCurrentText(saved_command)
                             self.command_preset_combo.blockSignals(False)
-                        saved_remote_search = data.get("remote_search")
-                        if saved_remote_search is not None:
-                            self.remote_search_input.blockSignals(True)
-                            self.remote_search_input.setText(saved_remote_search)
-                            self.remote_search_input.blockSignals(False)
                         saved_hub_url = data.get("hub_url")
                         if saved_hub_url is not None:
                             self.hub_url_input.blockSignals(True)
                             self.hub_url_input.setText(saved_hub_url)
-                            self.engine.base_url = saved_hub_url or os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+                            self.engine.base_url = saved_hub_url or os.environ.get("OLLAMA_HOST", "http://100.100.181.59:11434")
                             self.hub_url_input.blockSignals(False)
                     self.render_messages()
-                    if self.remote_search_input.text().strip():
-                        self.search_remote_models()
                     self.ghost_log.log("SESSION_RE_ANIMATED: OK")
         except:
             pass
@@ -867,8 +715,7 @@ class AuraWindow(QMainWindow):
                         "operation_mode": self.engine.operation_mode,
                         "current_model": self.model,
                         "command_preset": self.command_preset_combo.currentText(),
-                        "remote_search": self.remote_search_input.text(),
-                        "hub_url": self.hub_url_input.text(),
+                        "hub_url": self.hub_url_input.text() if hasattr(self, 'hub_url_input') else "",
                     },
                     f,
                 )
@@ -918,7 +765,7 @@ class AuraWindow(QMainWindow):
         if url:
             self.engine.base_url = url
         else:
-            self.engine.base_url = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11435")
+            self.engine.base_url = os.environ.get("OLLAMA_HOST", "http://100.100.181.59:11434")
         self.save_session()
         
     def _sync_model_selector(self):
@@ -958,87 +805,6 @@ class AuraWindow(QMainWindow):
             weight = "[LIGHT]" if self.engine.is_lightweight_model(name) else "[HEAVY]"
             self.models_list.addItem(f"{name} ({size:.1f}GB) {status} {weight}")
 
-    def fetch_remote_models(self, query: str = ""):
-        import requests
-
-        url = "https://www.ollama.com/search"
-        params = {}
-        if query:
-            params["q"] = query
-
-        response = requests.get(url, params=params, timeout=10, headers={"User-Agent": "Aura/1.0"})
-        response.raise_for_status()
-
-        html_text = response.text
-        models = []
-        seen = set()
-        for match in re.finditer(r'href="/library/([^"/?#]+)"', html_text):
-            slug = match.group(1)
-            if slug in seen:
-                continue
-            seen.add(slug)
-            window = html_text[match.start():match.start() + 900]
-            cleaned = re.sub(r"<[^>]+>", " ", window)
-            cleaned = html.unescape(re.sub(r"\s+", " ", cleaned)).strip()
-            cleaned = cleaned.replace(slug, "").strip()
-            if query and query.lower() not in cleaned.lower() and query.lower() not in slug.lower():
-                continue
-            models.append({"slug": slug, "summary": cleaned[:220]})
-            if len(models) >= 40:
-                break
-        return models
-
-    def search_remote_models(self):
-        query = self.remote_search_input.text().strip()
-        self.remote_models_list.clear()
-        self.remote_models = []
-
-        self.remote_models_list.addItem("Loading Ollama library...")
-        try:
-            self.remote_models = self.fetch_remote_models(query)
-        except Exception as exc:
-            self.remote_models_list.clear()
-            self.remote_models_list.addItem(f"Search failed: {exc}")
-            return
-
-        self.remote_models_list.clear()
-        if not self.remote_models:
-            self.remote_models_list.addItem("No models found.")
-            return
-
-        for model in self.remote_models:
-            slug = model["slug"]
-            summary = model["summary"] or "No description available."
-            item = QListWidgetItem(f"{slug} — {summary}")
-            item.setData(Qt.UserRole, slug)
-            self.remote_models_list.addItem(item)
-
-    def pull_selected_remote_model(self):
-        items = self.remote_models_list.selectedItems()
-        if not items:
-            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NO REMOTE MODEL SELECTED</i></p>")
-            return
-
-        slug = items[0].data(Qt.UserRole) or items[0].text().split(" — ")[0].strip()
-        if not slug:
-            return
-
-        safe_slug = html.escape(slug)
-        self.output_area.append(
-            f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Pulling remote model: {safe_slug}</i></p>"
-        )
-        result = subprocess.run(["ollama", "pull", slug], capture_output=True, text=True)
-        if result.returncode == 0:
-            self.output_area.append(
-                f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // Pulled {safe_slug}</i></p>"
-            )
-            self.populate_models_list()
-        else:
-            error_text = html.escape((result.stderr or result.stdout or "Unknown error").strip())
-            self.output_area.append(
-                f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // PULL FAILED: {error_text}</i></p>"
-            )
-
     def switch_to_selected_model(self):
         items = self.models_list.selectedItems()
         if not items:
@@ -1069,56 +835,6 @@ class AuraWindow(QMainWindow):
         self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
         self.engine.current_model = self.model
         self.save_session()
-
-    def remove_selected_model(self):
-        items = self.models_list.selectedItems()
-        if not items:
-            self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NO MODEL SELECTED</i></p>")
-            return
-
-        target = items[0].text().split(" ")[0]
-        self.output_area.append(
-            f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Removing local model: {html.escape(target)}</i></p>"
-        )
-        result = subprocess.run(["ollama", "rm", target], capture_output=True, text=True)
-        if result.returncode == 0:
-            self.output_area.append(
-                f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // Removed {html.escape(target)}</i></p>"
-            )
-            self.populate_models_list()
-            if self.model == target:
-                self.model = self.models[0] if self.models else self.engine.get_default_model()
-                self._sync_model_selector()
-        else:
-            error_text = html.escape((result.stderr or result.stdout or "Unknown error").strip())
-            self.output_area.append(
-                f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // REMOVE FAILED: {error_text}</i></p>"
-            )
-
-    def pull_model(self):
-        model_name = self.pull_input.text().strip()
-        if not model_name: return
-        self.pull_btn.setEnabled(False)
-        self.pull_btn.setText("PULLING...")
-        safe_name = html.escape(model_name)
-        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Pulling {safe_name} from Ollama...</i></p>")
-        self.ghost_log.log(f"API_REQUEST: PULL_MODEL ({model_name})")
-        
-        self.pull_worker = PullWorker(model_name)
-        self.pull_worker.finished.connect(self.on_pull_finished)
-        self.pull_worker.start()
-
-    def on_pull_finished(self, success, message):
-        self.pull_btn.setEnabled(True)
-        self.pull_btn.setText("PULL")
-        self.pull_input.clear()
-        safe_msg = html.escape(message)
-        color = "#41CD52" if success else "#FF5555"
-        self.output_area.append(f"<p style='color: {color}; font-family: Monospace;'><i>SYSTEM // {safe_msg}</i></p>")
-        self.ghost_log.log(f"API_RESPONSE: PULL_MODEL_STATUS ({success})")
-        if success:
-            self.populate_models_list()
-
 
     def update_temp(self, val):
         self.gen_options['temperature'] = val / 100.0
@@ -1163,12 +879,15 @@ class AuraWindow(QMainWindow):
             self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ABORTED BY USER</i></p>")
             self.abort_btn.setVisible(False)
 
-    def process_input(self):
-        text = self.input_field.toPlainText().strip()
+    def process_input(self, text: str = None, is_tool_result: bool = False):
+        if text is None:
+            text = self.input_field.toPlainText().strip()
+            
         if not text: return
 
         # 1. Navigation Handling (cd command)
-        if text.startswith("cd "):
+        if not is_tool_result and text.startswith("cd "):
+
             target = text[3:].strip()
             if target == "~":
                 target = os.path.expanduser("~")
@@ -1192,7 +911,7 @@ class AuraWindow(QMainWindow):
             self.input_field.clear()
             return
 
-        if text.startswith("/"):
+        if not is_tool_result and text.startswith("/"):
             cmd = text[1:].lower()
 
             if cmd == "stop" or cmd == "abort":
@@ -1334,53 +1053,85 @@ class AuraWindow(QMainWindow):
         self.abort_btn.setVisible(False)
         self.ghost_log.log("API_STREAM_END: OK")
         if self.pending_message:
-            # Check for Tool Use (WRITE_FILE)
             content = self.pending_message["content"]
-            if "WRITE_FILE:" in content and "CONTENT:" in content and "EOF" in content:
-                self.handle_tool_use(content)
             
-            self.messages.append(self.pending_message)
-            self.pending_message = None
-        self.render_messages()
-        self.save_session()
-        self.input_field.setEnabled(True)
-        self.input_field.setFocus()
+            # Detect JSON Tool Call blocks (both raw and markdown-fenced)
+            tool_match = re.search(r'```json\s*(\{.*?"command":.*?\})\s*```', content, re.DOTALL)
+            if not tool_match:
+                tool_match = re.search(r'(\{.*?"command":.*?\})', content, re.DOTALL)
 
-    def handle_tool_use(self, content: str):
-        try:
-            # Simple parser for the model's command
-            parts = content.split("WRITE_FILE:")[1].split("CONTENT:")
-            path = parts[0].strip()
-            file_content = parts[1].split("EOF")[0].strip()
-            
-            # Security: Prevent path traversal
-            if os.path.isabs(path) or ".." in path:
-                safe_path = html.escape(path)
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path traversal detected: {safe_path}</i></p>")
-                return
+            qwen_match = re.search(r'<｜tool▁call▁begin｜>function<｜tool▁sep｜>(.*?):\s*(\{.*?\})', content, re.DOTALL)
 
-            full_path = os.path.normpath(os.path.join(self.engine.project_root, path))
-            
-            # Security: Ensure path is within project root
-            if not full_path.startswith(os.path.normpath(self.engine.project_root)):
-                safe_path = html.escape(path)
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_DENIED: Path outside workspace: {safe_path}</i></p>")
-                return
-
-            from PySide6.QtWidgets import QMessageBox
-            reply = QMessageBox.question(self, "AURA // TOOL_USE", 
-                                       f"QWEN requests to modify: {path}\n\nProceed with changes?",
-                                       QMessageBox.Yes | QMessageBox.No)
-            
-            if reply == QMessageBox.Yes:
-                os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                with open(full_path, "w") as f:
-                    f.write(file_content)
-                safe_path = html.escape(path)
-                self.output_area.append(f"<p style='color: #41CD52; font-family: Monospace;'><i>SYSTEM // FILE_WRITTEN: {safe_path}</i></p>")
+            if tool_match:
+                self.messages.append(self.pending_message)
+                self.pending_message = None
+                self.render_messages()
+                self.handle_tool_use(tool_match.group(1))
+            elif qwen_match:
+                command_name = qwen_match.group(1).strip()
+                args_str = qwen_match.group(2).strip()
+                # Fix Qwen's Python-style kwargs (e.g., {dir_path='.'}) to JSON
+                args_str = re.sub(r'([a-zA-Z0-9_]+)=', r'"\1":', args_str).replace("'", '"')
+                try:
+                    # Validate JSON conversion
+                    json.loads(args_str)
+                    json_str = f'{{"command": "{command_name}", "args": {args_str}}}'
+                    self.messages.append(self.pending_message)
+                    self.pending_message = None
+                    self.render_messages()
+                    self.handle_tool_use(json_str)
+                except json.JSONDecodeError:
+                    self.messages.append(self.pending_message)
+                    self.pending_message = None
+                    self.render_messages()
+                    self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // NATIVE TOOL PARSE ERROR</i></p>")
             else:
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // FILE_WRITE_CANCELLED</i></p>")
+                self.messages.append(self.pending_message)
+                self.pending_message = None
+                self.render_messages()
+                self.save_session()
+                self.input_field.setEnabled(True)
+                self.input_field.setFocus()
+
+    def handle_tool_use(self, json_str: str):
+        try:
+            tool_data = json.loads(json_str)
+            command_name = tool_data.get("command")
+            args = tool_data.get("args", {})
+            
+            if not command_name:
+                raise ValueError("No 'command' specified in JSON")
+
+            safe_cmd = html.escape(command_name)
+            self.output_area.append(f"<p style='color: #00e6e6; font-family: Monospace;'><i>SYSTEM // EXECUTING TOOL: {safe_cmd}</i></p>")
+            self.ghost_log.log(f"TOOL_EXECUTION: {command_name}")
+
+            # Execute via Engine Registry
+            from aura_core.engine import ToolRegistry
+            
+            # Inject context
+            if "dir_path" not in args and command_name in ["run_shell_command", "grep_search", "list_directory"]:
+                args["dir_path"] = self.engine.project_root
+            if "file_path" in args and not os.path.isabs(args["file_path"]):
+                args["file_path"] = os.path.normpath(os.path.join(self.engine.project_root, args["file_path"]))
+
+            result = ToolRegistry.execute(command_name, args)
+            
+            # Ensure we don't blow up the context window
+            if len(result) > 4000:
+                result = result[:4000] + "\n...[TRUNCATED]"
+
+            observation = f"<tool_result>\n{result}\n</tool_result>"
+            self.ghost_log.log("TOOL_RESULT_INJECTED")
+            
+            # Autonomous Re-entry
+            self.process_input(text=observation, is_tool_result=True)
+
         except Exception as e:
+            safe_e = html.escape(str(e))
+            self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_PARSE_ERROR: {safe_e}</i></p>")
+            self.input_field.setEnabled(True)
+            self.input_field.setFocus()
             safe_e = html.escape(str(e))
             self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_USE_ERROR: {safe_e}</i></p>")
 
@@ -1431,22 +1182,38 @@ class AuraWindow(QMainWindow):
             else:
                 is_pending = (self.pending_message and msg == self.pending_message)
                 content = msg['content']
+                
+                # 🛡️ CLEANUP: Hide Tool Calls from the UI
+                display_content = content
+                if not getattr(self, 'debug_toggle', None) or not self.debug_toggle.isChecked():
+                    # 1. Hide Markdown JSON blocks containing "command"
+                    display_content = re.sub(r'```json\s*(\{.*?"command":.*?\})\s*```', '', content, flags=re.DOTALL)
+                    # 2. Hide Qwen native tool tokens
+                    display_content = re.sub(r'<｜tool▁calls▁begin｜>.*?<｜tool▁outputs▁end｜>', '', display_content, flags=re.DOTALL)
+                    display_content = re.sub(r'<｜tool▁call▁begin｜>.*?<｜tool▁call▁end｜>', '', display_content, flags=re.DOTALL)
+                    # Fallback clean for incomplete tokens during stream
+                    display_content = display_content.replace("<｜tool▁calls▁begin｜>", "")
+
+                    if not display_content.strip() and is_pending:
+                        display_content = "..." # Show something while it computes tools silently
+
                 if is_pending:
                     # ⚡ HOLOGRAPHIC BRACKETS: Only during stream
-                    safe_inner = html.escape(content)
+                    safe_inner = html.escape(display_content)
                     content_html = f"<pre style='white-space: pre-wrap; font-family: inherit;'><span style='color: #00e6e6;'>[</span> {safe_inner} <span style='color: #00e6e6;'>]</span></pre>"
                 else:
                     content_html = msg.get("_rendered_html")
                     if content_html is None:
-                        content_html = self.md.render(content)
+                        content_html = self.md.render(display_content)
                         msg["_rendered_html"] = content_html
                 
                 # ⚡ POWER STRIPE: Dynamic border width simulation
-                stripe_width = min(20, len(content) // 10)
+                stripe_width = min(20, len(display_content) // 10)
                 stripe_style = f"border-left: {stripe_width}px solid {role_color};"
                 
                 msg_html = f"<div style='{glow_style} {stripe_style} margin-right: 50px;'>"
-                safe_model_role = html.escape(msg['model'].upper())
+                model_name = msg.get('model', 'AURA')
+                safe_model_role = html.escape(model_name.upper())
                 msg_html += f"<div style='color: #00e6e6; font-size: 13px; letter-spacing: 1px;'><b>{safe_model_role}</b></div>"
                 msg_html += f"<div style='color: #B0B0B0;'>{content_html}</div></div><br>"
 

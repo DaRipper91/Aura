@@ -11,7 +11,7 @@ from aura_core.engine import OllamaClient
 def run_cli():
     parser = argparse.ArgumentParser(description="Aura CLI: Local AI Autonomous Agent")
     parser.add_argument("prompt", nargs="?", help="Initial prompt to start the session")
-    parser.add_argument("--model", default=os.environ.get("AURA_DEFAULT_MODEL", "qwen2.5-coder:1.5b"), help="Ollama model to use")
+    parser.add_argument("--model", default=os.environ.get("AURA_DEFAULT_MODEL", "qwen2.5-coder:7b"), help="Ollama model to use")
     parser.add_argument("--verbosity", type=float, default=0.5, help="Response verbosity (0.0 to 1.0)")
     args = parser.parse_args()
 

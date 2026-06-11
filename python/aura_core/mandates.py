@@ -1,7 +1,9 @@
 import os
 from typing import Optional, Protocol, runtime_checkable
 
-# --- MANDATE PROTOCOLS ---
+# --- PROJECT MANDATES ---
+IDENTITY = "Shut Up and Compute"
+MANDATE_VERSION = "1.0.6"
 
 @runtime_checkable
 class BoltEngine(Protocol):
