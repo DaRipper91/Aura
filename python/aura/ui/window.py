@@ -728,6 +728,13 @@ class AuraWindow(QMainWindow):
                 width: 12px;
                 border-radius: 6px;
             }}
+            QSlider:focus::handle:horizontal {{
+                background: #ffffff;
+                border: 2px solid #6633FF;
+            }}
+            QSlider:disabled::handle:horizontal {{
+                background: rgba(0, 230, 230, 0.3);
+            }}
             QPushButton {{
                 background-color: rgba(128, 0, 128, 0.1);
                 color: #00e6e6;
@@ -746,6 +753,11 @@ class AuraWindow(QMainWindow):
                 border-color: #00e6e6;
                 outline: none;
                 background-color: rgba(128, 0, 128, 0.2);
+            }}
+            QPushButton:checked {{
+                background-color: rgba(0, 230, 230, 0.2);
+                border: 1px solid #00e6e6;
+                color: #ffffff;
             }}
             QPushButton:disabled {{
                 color: rgba(0, 230, 230, 0.3);
