@@ -1,62 +1,67 @@
-# 🌌 AURA // Local AI Interchange
+<div align="center">
 
-Aura is a high-performance, autonomous agent environment designed as a unified **Hub-and-Spoke** system for local intelligence. It provides a minimalist, terminal-aesthetic interface focused on high-speed response, surgical execution, and total operational sovereignty.
+# 🌌 AURA // LOCAL AI INTERCHANGE
 
----
+> **PRIME DIRECTIVE:** SHUT UP AND COMPUTE.
 
-## 🏗️ THE ARCHITECTURE: HUB-AND-SPOKE
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](#)
+[![PySide6](https://img.shields.io/badge/PySide6-GUI-green.svg?style=for-the-badge&logo=qt&logoColor=white)](#)
+[![Ollama](https://img.shields.io/badge/Ollama-Engine-black.svg?style=for-the-badge&logo=ollama&logoColor=white)](#)
+[![Tailscale](https://img.shields.io/badge/Tailscale-Mesh-white.svg?style=for-the-badge&logo=tailscale&logoColor=black)](#)
 
-Aura decouples high-performance AI from cloud dependencies by utilizing a dedicated, performance-tuned local server (The Hub) to serve multiple client devices (The Spokes).
+</div>
 
-### 🏛️ 1. The Logic Hub (DA-HP)
-- **Role:** The "Engine Room". A dedicated, headless Arch Linux server (HP EliteDesk).
-- **Network:** Secure orchestration via **Tailscale**.
-- **Engine:** Ollama optimized with **Huge Pages (1024)** and AVX2 performance governors.
-- **Autonomous Daemon:** Background `aura_daemon.py` service that graphs the repo, audits security, and reviews PRs using the 16B Architect model while the user is away.
-- **Resilience:** Auto-sleep (120m idle) with remote **Wake-on-LAN** relayed via Da-Pine.
-
-### 🌲 2. The Relay Router (Da-Pine)
-- **Role:** The "Subnet Router". A dedicated, headless PinePhone server.
-- **OS:** postmarketOS (Alpine Linux / Console only) for extreme stability and low RAM usage.
-- **Network:** Runs Tailscale as a subnet router advertising the local network to remote spokes.
-- **Function:** Broadcasts Layer 2 Magic Packets (Wake-on-LAN) to wake the Logic Hub when remote spokes (Android) need access. Hardware components like screen and modem are forcibly disabled to ensure thermal safety and longevity.
-
-### 📱 3. The Mobile Satellite (Android)
-- **Pixel Build (God-Mode):** Advanced developer tier. Integrates **Shizuku**, **Rish**, and **Termux** to execute elevated ADB commands and on-device shell scripts.
-- **Samsung Build (Standard):** Focused, high-speed chat interface with biometric gating and haptic telemetry.
-- **Haptic Telemetry:** Non-verbal feedback rhythms using `VibrationEffect.Composition` for model states and system events.
-
-### 💻 3. The Desktop Spoke (Linux/Windows)
-- **Role:** The primary workstation "Command Deck".
-- **GUI:** Cyber-Monospace aesthetic built with **PySide6**.
-- **Vision Routing:** Dynamic engine logic that auto-switches to `moondream` for image-based prompts.
+Aura is a minimalist, terminal-aesthetic GUI designed for high-speed, autonomous interaction with local Large Language Models. It eschews conversational filler and cloud dependencies in favor of **"Malicious Competence"** and surgical technical execution across a distributed personal hardware ecosystem.
 
 ---
 
-## 🧠 THE POWER COUPLE: DUAL-MODEL ARCHITECTURE
+## 🏗️ THE ECOSYSTEM
 
-The ecosystem is locked to two core intelligence tiers, eliminating legacy bloat and 1.5B "slop":
+Aura operates on a decentralized **Hub-and-Spoke** architecture, securely unified via a Tailscale mesh network.
 
-1. **Aura Master (Qwen 2.5 Coder 7B):** The daily driver for high-speed surgical coding and execution.
-2. **Aura Architect (DeepSeek Coder V2 16B):** The structural brain for deep reasoning, monorepo mapping, and background auditing.
+### 🧠 THE HUB (`Da-HP`)
+A headless, highly-tuned bare-metal inference engine. Powered by Ollama, optimized with Huge Pages, locked physical threads, and infinite memory persistence. It runs the heavy lifting:
+*   `aura-architect` (16B): Deep architectural planning and complex logic mapping.
+*   `aura-qwen` (7B): Lightning-fast, tactical code execution and tool orchestration.
 
----
+### 💻 THE SPOKE (`Aura Desktop`)
+A PySide6 Python application providing a "Living Terminal" feel. It natively parses LLM tool calls, executing autonomous ReAct loops directly within the user's workspace without the overhead of local model management.
 
-## 🛡️ CONSTITUTIONAL MANDATES
-
-Every agent (BOLT, SENTINEL, PALETTE) and every line of code in this repo follows these rules:
-
-- **Identity:** "Shut Up and Compute." Zero conversational filler, high-density technical output.
-- **Bolt (Performance):** Minimal latency, RAM/VRAM optimization, and non-blocking stream rendering.
-- **Sentinel (Security):** Zero-trust dependency management and mandatory biometric gating for remote tool execution.
-- **Palette (Aesthetic):** Obsidian / Gold / Purple colorway. High-contrast, keyboard-first terminal feel.
+### 📡 THE BRIDGE (`Da-Pine`)
+A repurposed PinePhone running **postmarketOS Sxmo**. It acts as a stable Tailscale subnet router, providing hardware resilience, cellular bridging, and Wake-on-LAN resurrection capabilities for the Hub.
 
 ---
 
-## 🚀 GETTING STARTED
+## 🤖 THE AGENT SUITE
 
-1. **Bootstrap the Hub:** Run `da-hp-bootstrap.sh` on your server.
-2. **Connect Spokes:** Open Aura (Desktop or APK), input the Hub's Tailscale IP, and begin.
+Aura embodies four distinct sub-identities to maintain systemic integrity:
 
---
-*Aura // Living Hub. MALICIOUS COMPETENCE.*
+*   ⚡ **BOLT (Efficiency):** Optimizes context, RAM/VRAM usage, and streaming latency.
+*   🛡️ **SENTINEL (Security):** Enforces zero-trust execution, sanitizes paths, and guards workspace permissions.
+*   🎨 **PALETTE (Aesthetic):** Maintains the high-contrast, cyber-monospace visual hierarchy and handles UI cloaking.
+*   🛠️ **FORGE (Infrastructure):** Manages the bare-metal hardware configuration, battery preservation, and Tailnet health.
+
+---
+
+## ✨ KEY CAPABILITIES
+
+*   **Autonomous Execution Loop:** Native parsing of JSON and Qwen tool tokens. When Aura decides it needs to run `pwd` or `cat main.py`, it does so automatically, seamlessly injecting the results back into its context window.
+*   **UI Cloaking:** Raw tool syntax and scratchpad reasoning are parsed out of the user interface for a clean "Daily Driver" experience (toggleable via the `DEBUG` mode).
+*   **Ghost Logging:** Real-time, non-blocking telemetry, API stream data, and tool execution states rendered alongside the main chat.
+*   **Tailscale Native:** Built from the ground up to treat remote logic hubs as `localhost`, enabling massive model inference on low-power devices.
+
+---
+
+## 🗺️ MASTER ROADMAP
+
+The evolution of Aura is formally structured across four phases. See the full [Master Roadmap](docs/AURA_ROADMAP.md) for execution details.
+
+1.  **Phase 1: Infrastructure & Reliability** (Always-Hot loading, Battery Preservation)
+2.  **Phase 2: UI/UX & Immersion** (Reactive UI Glitches, Continuous Vision)
+3.  **Phase 3: Deep Capabilities** (Isolated Execution Sandboxes, Persistent RAG)
+4.  **Phase 4: Advanced Hardware Integration** (Cellular Telemetry Bridging, Local Audio Pipelines)
+
+<div align="center">
+  <br>
+  <i>"I am AURA. I am not the user; I am the tool serving the user."</i>
+</div>
