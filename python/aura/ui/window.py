@@ -10,6 +10,7 @@ from aura_core.mandates import aura_component
 from markdown_it import MarkdownIt
 import os
 import sys
+import re
 import ctypes
 import json
 import html
