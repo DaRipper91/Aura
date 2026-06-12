@@ -14,7 +14,9 @@ class AuraBridge(private val context: android.content.Context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var useLocalInference = false
     private val prefs = context.getSharedPreferences("aura_prefs", android.content.Context.MODE_PRIVATE)
-    private val biometricHelper = if (context is androidx.fragment.app.FragmentActivity) BiometricHelper(context) else null
+    private var onEngineSwitch: ((Boolean) -> Unit)? = null
+    private val modelManager = ModelManager(context)
+    private val sensorBridge = SensorBridge(context)
 
     init {
         localEngine = LocalInferenceEngine(context)
@@ -22,18 +24,29 @@ class AuraBridge(private val context: android.content.Context) {
             val py = Python.getInstance()
             val engineModule = py.getModule("aura_core.engine")
             pythonEngine = engineModule.callAttr("OllamaClient")
-            
+
             // 💾 PERSISTENCE: Load saved URL or use default
             val savedUrl = prefs.getString("orchestrator_url", "http://10.0.0.1:11434")
             pythonEngine?.callAttr("set_base_url", savedUrl)
 
             // 🛡️ SENTINEL: Register Security Handler
             pythonEngine?.callAttr("register_security_handler", SecurityHandler())
+
+            // 📡 FORGE: Register Telemetry Handler
+            pythonEngine?.callAttr("register_telemetry_handler", TelemetryHandler())
         } catch (e: Exception) {
             android.util.Log.e("AuraBridge", "Python Engine Initialization Failed: ${e.message}")
         }
     }
 
+    /**
+     * Internal handler passed to Python to fetch on-device sensor data.
+     */
+    inner class TelemetryHandler {
+        fun __call__(fuzzed: Boolean): String {
+            return sensorBridge.getTelemetry(fuzzed)
+        }
+    }
     /**
      * Internal handler passed to Python to manage biometric gating.
      */

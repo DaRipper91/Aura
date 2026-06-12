@@ -22,15 +22,22 @@ class ToolRegistry:
         "termux_command": "RISKY",
         "long_term_memory": "SAFE",
         "check_cellular": "SAFE",
-        "voice_synthesis": "SAFE"
+        "voice_synthesis": "SAFE",
+        "check_satellite_sensors": "SAFE"
     }
 
     _security_callback = None
+    _telemetry_callback = None
 
     @classmethod
     def set_security_callback(cls, callback):
         """Allows mobile/desktop to register an authorization handler."""
         cls._security_callback = callback
+
+    @classmethod
+    def set_telemetry_callback(cls, callback):
+        """Allows mobile satellite to register a sensor data handler."""
+        cls._telemetry_callback = callback
 
     @staticmethod
     def read_file(args: dict) -> str:
@@ -293,6 +300,18 @@ class ToolRegistry:
         except Exception as e:
             return f"Audio Error: {e}"
 
+    @staticmethod
+    def check_satellite_sensors(args: dict) -> str:
+        """Phase 5: Query Pixel 10 Pro sensors (Power, Location, Signal)."""
+        if not ToolRegistry._telemetry_callback:
+            return "Error: Sensor Bridge not registered (Satellite offline?)."
+        
+        fuzzed = args.get("precision", "NORMAL") != "PRECISION"
+        try:
+            return ToolRegistry._telemetry_callback(fuzzed)
+        except Exception as e:
+            return f"Sensor Error: {e}"
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         # 🛡️ SENTINEL: Enforcement Point
@@ -321,7 +340,8 @@ class ToolRegistry:
             "voice_synthesis": cls.voice_synthesis,
             "aider_fix": cls.aider_fix,
             "shizuku_command": cls.shizuku_command,
-            "termux_command": cls.termux_command
+            "termux_command": cls.termux_command,
+            "check_satellite_sensors": cls.check_satellite_sensors
         }
         if name in methods:
             return methods[name](args)
@@ -480,6 +500,10 @@ class OllamaClient:
     def register_security_handler(self, handler):
         """Allows mobile/desktop to register an authorization handler."""
         ToolRegistry.set_security_callback(handler)
+
+    def register_telemetry_handler(self, handler):
+        """Allows mobile satellite to register a sensor data handler."""
+        ToolRegistry.set_telemetry_callback(handler)
 
     def get_default_model(self) -> str:
         env_model = os.environ.get("AURA_DEFAULT_MODEL", "").strip()
