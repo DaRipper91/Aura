@@ -23,11 +23,13 @@ class ToolRegistry:
         "long_term_memory": "SAFE",
         "check_cellular": "SAFE",
         "voice_synthesis": "SAFE",
-        "check_satellite_sensors": "SAFE"
+        "check_satellite_sensors": "SAFE",
+        "dispatch_task": "RISKY"
     }
 
     _security_callback = None
     _telemetry_callback = None
+    _action_callback = None
 
     @classmethod
     def set_security_callback(cls, callback):
@@ -38,6 +40,11 @@ class ToolRegistry:
     def set_telemetry_callback(cls, callback):
         """Allows mobile satellite to register a sensor data handler."""
         cls._telemetry_callback = callback
+
+    @classmethod
+    def set_action_callback(cls, callback):
+        """Allows spokes to register a generic tool execution handler."""
+        cls._action_callback = callback
 
     @staticmethod
     def read_file(args: dict) -> str:
@@ -319,6 +326,60 @@ class ToolRegistry:
         except Exception as e:
             return f"Sensor Error: {e}"
 
+    @staticmethod
+    def dispatch_task(args: dict) -> str:
+        """Phase 6.1: Route a tool execution to a specific node in the fleet."""
+        node_map = {
+            "hp": "100.100.181.59",
+            "hub": "100.100.181.59",
+            "pine": "100.89.146.20",
+            "bridge": "100.89.146.20",
+            "satellite": "100.83.49.113",
+            "pixel": "100.83.49.113",
+            "desktop": "100.103.146.46",
+            "asahi": "100.103.146.46"
+        }
+        
+        node_id = args.get("node_id", "").lower()
+        tool = args.get("tool")
+        tool_args = args.get("args", {})
+        
+        if not node_id or not tool:
+            return "Error: node_id and tool are required"
+            
+        target_ip = node_map.get(node_id)
+        if not target_ip:
+            return f"Error: Unknown node '{node_id}'"
+
+        # ⚡ ROUTING LOGIC
+        if node_id in ["hp", "hub"]:
+            # Route to Hub's Docker Sandbox
+            return ToolRegistry.run_shell_command({"command": f"REMOTE_DISPATCH: {tool} {tool_args}"})
+            
+        elif node_id in ["pine", "bridge"]:
+            # Route to PinePhone Modem/System
+            if tool == "check_cellular":
+                return ToolRegistry.check_cellular(tool_args)
+            return f"Error: Tool '{tool}' not supported on node '{node_id}'"
+            
+        elif node_id in ["satellite", "pixel"]:
+            # Route to Android Satellite
+            if tool == "check_sensors":
+                return ToolRegistry.check_satellite_sensors(tool_args)
+            if ToolRegistry._action_callback:
+                return ToolRegistry._action_callback(tool, tool_args)
+            return f"Error: No action handler registered on {node_id}"
+            
+        elif node_id in ["desktop", "asahi"]:
+            # Route to Desktop Audio/UI
+            if tool == "voice_synthesis":
+                return ToolRegistry.voice_synthesis(tool_args)
+            if ToolRegistry._action_callback:
+                return ToolRegistry._action_callback(tool, tool_args)
+            return f"Error: No action handler registered on {node_id}"
+
+        return f"Error: No routing path defined for {node_id} -> {tool}"
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         # 🛡️ SENTINEL: Enforcement Point
@@ -348,7 +409,8 @@ class ToolRegistry:
             "aider_fix": cls.aider_fix,
             "shizuku_command": cls.shizuku_command,
             "termux_command": cls.termux_command,
-            "check_satellite_sensors": cls.check_satellite_sensors
+            "check_satellite_sensors": cls.check_satellite_sensors,
+            "dispatch_task": cls.dispatch_task
         }
         if name in methods:
             return methods[name](args)
@@ -512,6 +574,10 @@ class OllamaClient:
         """Allows mobile satellite to register a sensor data handler."""
         ToolRegistry.set_telemetry_callback(handler)
 
+    def register_action_handler(self, handler):
+        """Allows spokes to register a generic tool execution handler."""
+        ToolRegistry.set_action_callback(handler)
+
     def get_default_model(self) -> str:
         env_model = os.environ.get("AURA_DEFAULT_MODEL", "").strip()
         if env_model:
@@ -615,7 +681,8 @@ class OllamaClient:
             "10. check_satellite_sensors: {\"precision\": \"NORMAL\"|\"PRECISION\"} (Query Pixel 10 Pro Power, GPS, Signal)\n"
             "11. long_term_memory: {\"action\": \"query\"|\"store\", \"content\": str}\n"
             "12. check_cellular: {\"action\": \"get_sms\"|\"get_status\"} (Query PinePhone Modem)\n"
-            "13. voice_synthesis: {\"text\": str} (Speak through local Fedora host)\n\n"
+            "13. voice_synthesis: {\"text\": str} (Speak through local Fedora host)\n"
+            "14. dispatch_task: {\"node_id\": \"hp\"|\"pine\"|\"satellite\"|\"desktop\", \"tool\": str, \"args\": dict} (Route task to specific node)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute a tool, output strictly a JSON block matching the signature. For example:\n"

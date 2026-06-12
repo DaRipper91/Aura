@@ -38,8 +38,39 @@ class AuraBridge(private val context: android.content.Context) {
 
             // 📡 FORGE: Register Telemetry Handler
             pythonEngine?.callAttr("register_telemetry_handler", TelemetryHandler())
+
+            // 🧠 COLLECTIVE: Register Action Handler
+            pythonEngine?.callAttr("register_action_handler", ActionHandler())
         } catch (e: Exception) {
             android.util.Log.e("AuraBridge", "Python Engine Initialization Failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Internal handler passed to Python to execute dispatched tasks on the satellite.
+     */
+    inner class ActionHandler {
+        fun __call__(tool: String, args: PyObject): String {
+            return try {
+                when (tool) {
+                    "notify" -> {
+                        val text = args.callAttr("get", "text", "Aura Alert").toString()
+                        mainHandler.post {
+                            android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        "Notification triggered on Satellite."
+                    }
+                    "vibrate" -> {
+                        val pattern = longArrayOf(0, 100, 200, 100)
+                        val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+                        vibrator.vibrate(android.os.VibrationEffect.createWaveform(pattern, -1))
+                        "Haptic pulse executed on Satellite."
+                    }
+                    else -> "Error: Action '$tool' not implemented on Satellite."
+                }
+            } catch (e: Exception) {
+                "Satellite Action Error: ${e.message}"
+            }
         }
     }
 
