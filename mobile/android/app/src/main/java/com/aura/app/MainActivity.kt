@@ -130,6 +130,7 @@ fun ChatScreen(
     // Feature Toggles
     var hapticsEnabled by remember { mutableStateOf(true) }
     var biometricsEnabled by remember { mutableStateOf(false) }
+    var alwaysListeningEnabled by remember { mutableStateOf(false) }
     
     val view = LocalView.current
     val context = LocalContext.current
@@ -141,6 +142,20 @@ fun ChatScreen(
             isLocalMode = local
             ghostLog = ghostLog + "ENGINE_SWITCH: ${if (local) "LOCAL_EDGE" else "REMOTE_HUB"}"
             if (hapticsEnabled) hapticHelper.stateAwakening()
+        }
+    }
+
+    // 🔥 COLLECTIVE: Monitor Hands-Free State
+    LaunchedEffect(alwaysListeningEnabled) {
+        val serviceIntent = Intent(context, AuraService::class.java).apply {
+            putExtra("EXTRA_HANDS_FREE", alwaysListeningEnabled)
+        }
+        if (alwaysListeningEnabled) {
+            context.startForegroundService(serviceIntent)
+            ghostLog = ghostLog + "HANDS_FREE: ENABLED"
+        } else {
+            context.stopService(serviceIntent)
+            ghostLog = ghostLog + "HANDS_FREE: DISABLED"
         }
     }
 
@@ -208,8 +223,10 @@ fun ChatScreen(
                 bridge = bridge,
                 hapticsEnabled = hapticsEnabled,
                 biometricsEnabled = biometricsEnabled,
+                alwaysListeningEnabled = alwaysListeningEnabled,
                 onHapticsToggle = { hapticsEnabled = it },
                 onBiometricsToggle = { biometricsEnabled = it },
+                onAlwaysListeningToggle = { alwaysListeningEnabled = it },
                 onClose = { showSettings = false }
             )
         }
@@ -324,8 +341,10 @@ fun SettingsPanel(
     bridge: AuraBridge,
     hapticsEnabled: Boolean,
     biometricsEnabled: Boolean,
+    alwaysListeningEnabled: Boolean,
     onHapticsToggle: (Boolean) -> Unit,
     onBiometricsToggle: (Boolean) -> Unit,
+    onAlwaysListeningToggle: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     var urlText by remember { mutableStateOf(bridge.getOrchestratorUrl()) }
@@ -395,6 +414,7 @@ fun SettingsPanel(
         SettingsSection("SYSTEM PREFERENCES") {
             ToggleRow("HAPTIC_FEEDBACK", hapticsEnabled, onHapticsToggle)
             ToggleRow("BIOMETRIC_VAULT", biometricsEnabled, onBiometricsToggle)
+            ToggleRow("HANDS_FREE (WHISPER)", alwaysListeningEnabled, onAlwaysListeningToggle)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
