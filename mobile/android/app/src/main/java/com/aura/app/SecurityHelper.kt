@@ -56,4 +56,23 @@ class SecurityHelper {
         
         return Base64.getEncoder().encodeToString(signature.sign())
     }
+
+    companion object {
+        fun calculateSHA256(file: java.io.File): String {
+            return try {
+                val digest = java.security.MessageDigest.getInstance("SHA-256")
+                val buffer = ByteArray(1024 * 8)
+                val inputStream = file.inputStream()
+                var read: Int
+                while (inputStream.read(buffer).also { read = it } != -1) {
+                    digest.update(buffer, 0, read)
+                }
+                inputStream.close()
+                val hashBytes = digest.digest()
+                hashBytes.joinToString("") { "%02x".format(it) }
+            } catch (e: Exception) {
+                "hash_error"
+            }
+        }
+    }
 }
