@@ -6,6 +6,7 @@ on:
     tags: [ "v*" ]
     paths:
       - 'python/**'
+      - 'installer.nsi'
       - '.github/workflows/build-windows.yml'
 
 jobs:
