@@ -271,15 +271,22 @@ class ToolRegistry:
     @staticmethod
     def check_cellular(args: dict) -> str:
         """Phase 4: Cellular Telemetry Bridge via Da-Pine."""
+        action = args.get("action", "get_status")
         hub_ip = "100.100.181.59"
         pine_ip = "172.16.42.1"
+        
         try:
+            if action == "get_sms":
+                cmd = "mmcli -m any --messaging-list-sms"
+            else:
+                cmd = "mmcli -m any"
+
             remote_cmd = [
                 "ssh", f"daripper@{hub_ip}",
-                f"sshpass -p '0' ssh -o StrictHostKeyChecking=no daripper@{pine_ip} 'mmcli -m any --messaging-list-sms'"
+                f"sshpass -p '0' ssh -o StrictHostKeyChecking=no daripper@{pine_ip} {shlex.quote(cmd)}"
             ]
             result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=15)
-            return result.stdout if result.stdout else "No SMS messages found or modem offline."
+            return result.stdout if result.stdout else "No data returned or modem offline."
         except Exception as e:
             return f"Cellular Error: {e}"
 
@@ -604,7 +611,11 @@ class OllamaClient:
             "6. run_shell_command: {\"command\": str}\n"
             "7. aider_fix: {\"file_path\": str, \"instructions\": str}\n"
             "8. shizuku_command: {\"command\": str} (Execute elevated Android commands via rish)\n"
-            "9. termux_command: {\"command\": str} (Execute commands in Termux environment)\n\n"
+            "9. termux_command: {\"command\": str} (Execute commands in Termux environment)\n"
+            "10. check_satellite_sensors: {\"precision\": \"NORMAL\"|\"PRECISION\"} (Query Pixel 10 Pro Power, GPS, Signal)\n"
+            "11. long_term_memory: {\"action\": \"query\"|\"store\", \"content\": str}\n"
+            "12. check_cellular: {\"action\": \"get_sms\"|\"get_status\"} (Query PinePhone Modem)\n"
+            "13. voice_synthesis: {\"text\": str} (Speak through local Fedora host)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute a tool, output strictly a JSON block matching the signature. For example:\n"
