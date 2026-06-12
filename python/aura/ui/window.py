@@ -17,7 +17,15 @@ import subprocess
 import time
 import random
 import tempfile
+import base64
+from io import BytesIO
+from collections import deque
 from typing import Optional
+from PIL import Image
+try:
+    import mss
+except ImportError:
+    mss = None
 
 class GhostLogArea(QTextEdit):
     def __init__(self, parent=None):
@@ -100,6 +108,44 @@ class AudioVisualizer(QWidget):
             color.setAlphaF(0.6)
             painter.fillRect(i * w + 2, y, w - 4, h, color)
 
+class VisionThread(QThread):
+    def __init__(self):
+        super().__init__()
+        self.buffer = deque(maxlen=3)
+        self.is_running = True
+
+    def run(self):
+        if not mss:
+            print("[AURA_VISION] mss library not found. Vision disabled.")
+            return
+
+        with mss.mss() as sct:
+            while self.is_running:
+                try:
+                    # Capture primary monitor (0 is all, 1 is first)
+                    monitor = sct.monitors[1]
+                    sct_img = sct.grab(monitor)
+                    
+                    # Convert to PIL for resizing to save bandwidth/tokens
+                    img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+                    img.thumbnail((1280, 1280)) 
+                    
+                    buffered = BytesIO()
+                    img.save(buffered, format="JPEG", quality=70)
+                    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                    
+                    self.buffer.append(img_str)
+                except Exception as e:
+                    print(f"[AURA_VISION] Capture Error: {e}")
+                
+                # Check for stop signal frequently
+                for _ in range(100):
+                    if not self.is_running: return
+                    time.sleep(0.1)
+
+    def stop(self):
+        self.is_running = False
+
 class ChatWorker(QThread):
     chunk_received = Signal(str)
     finished = Signal()
@@ -147,6 +193,8 @@ class AutoResizingTextEdit(QTextEdit):
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not event.modifiers() & Qt.ShiftModifier:
+            print("[AURA_UI] Enter Pressed")
+            event.accept()
             self.returnPressed.emit()
         else:
             super().keyPressEvent(event)
@@ -166,7 +214,8 @@ class AuraWindow(QMainWindow):
         "telemetry_label", "telemetry_timer", "typewriter_speed", "is_typing",
         "available_fonts", "verb_label", "verb_slider",
         "sat_label", "sat_slider", "profile_combo", "speed_label", "speed_slider",
-        "last_render_time", "operation_mode_combo", "command_preset_combo", "commands_btn"
+        "last_render_time", "operation_mode_combo", "command_preset_combo", "commands_btn",
+        "vision_worker"
     )
 
     def get_git_branch(self, path):
@@ -226,6 +275,11 @@ class AuraWindow(QMainWindow):
         self.typewriter_speed = 30 # ms per chunk
         self.is_typing = False
         self.messages = []
+        
+        # 👁️ WATCHFUL EYE: Background Vision Thread
+        self.vision_worker = VisionThread()
+        self.vision_worker.start()
+
         self.pending_message = None
         self.current_response_text = ""
         self.last_render_time = 0.0
@@ -286,7 +340,7 @@ class AuraWindow(QMainWindow):
 
         self.input_field = AutoResizingTextEdit()
         self.input_field.setPlaceholderText("DESCRIBE THE VOID...")
-        self.input_field.returnPressed.connect(self.process_input)
+        self.input_field.returnPressed.connect(lambda: self.process_input())
         chat_container.addWidget(self.input_field)
 
         # Footer for workspace status (gemini-cli style)
@@ -494,10 +548,6 @@ class AuraWindow(QMainWindow):
         switch_btn.clicked.connect(self.switch_to_selected_model)
         btn_layout.addWidget(switch_btn)
 
-        remove_btn = QPushButton("REMOVE")
-        remove_btn.clicked.connect(self.remove_selected_model)
-        btn_layout.addWidget(remove_btn)
-
         refresh_btn = QPushButton("REFRESH")
         refresh_btn.clicked.connect(self.populate_models_list)
         btn_layout.addWidget(refresh_btn)
@@ -662,11 +712,17 @@ class AuraWindow(QMainWindow):
         self.input_field.setPlainText(command)
         self.process_input()
 
-    def trigger_glitch(self):
-        # Subtle analog glitch effect
-        self.output_area.setStyleSheet("background-color: rgba(0, 230, 230, 0.05);")
-        QTimer.singleShot(100, lambda: self.output_area.setStyleSheet("background-color: transparent;"))
-        self.ghost_log.log("SYSTEM_GLITCH: CONTEXT_SHIFT_DETECTED")
+    def trigger_glitch(self, severity="subtle"):
+        """Palette Mandate: Reactive aesthetic feedback."""
+        colors = {
+            "subtle": "rgba(0, 230, 230, 0.08)",   # Cyan (Tool OK / Context Shift)
+            "critical": "rgba(255, 85, 85, 0.15)",  # Red (Error / Failure)
+            "wipe": "rgba(255, 0, 255, 0.1)"        # Magenta (Context Clear)
+        }
+        color = colors.get(severity, colors["subtle"])
+        self.output_area.setStyleSheet(f"background-color: {color};")
+        QTimer.singleShot(150, lambda: self.output_area.setStyleSheet("background-color: transparent;"))
+        self.ghost_log.log(f"UI_GLITCH_TRIGGERED: {severity.upper()}")
 
     def load_session(self):
         try:
@@ -721,6 +777,13 @@ class AuraWindow(QMainWindow):
                 )
         except:
             pass
+
+    def closeEvent(self, event):
+        """Clean up background threads on exit."""
+        if hasattr(self, 'vision_worker'):
+            self.vision_worker.stop()
+            self.vision_worker.wait()
+        super().closeEvent(event)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -783,7 +846,7 @@ class AuraWindow(QMainWindow):
                 self.model = new_model
                 self.engine.current_model = new_model
                 self.engine.clear_history()
-                self.trigger_glitch()
+                self.trigger_glitch("wipe")
                 safe_text = html.escape(text)
                 self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_text} (Context Cleared)</i></p>")
                 self.save_session()
@@ -814,7 +877,7 @@ class AuraWindow(QMainWindow):
         target = items[0].text().split(" ")[0] # extract just the name
         self.model = target
         self.engine.clear_history()
-        self.trigger_glitch()
+        self.trigger_glitch("wipe")
         
         # Add to header dropdown if it's new
         found_in_header = False
@@ -879,115 +942,128 @@ class AuraWindow(QMainWindow):
             self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ABORTED BY USER</i></p>")
             self.abort_btn.setVisible(False)
 
-    def process_input(self, text: str = None, is_tool_result: bool = False):
-        if text is None:
-            text = self.input_field.toPlainText().strip()
+    def process_input(self, *args, text=None, is_tool_result=False):
+        try:
+            # Handle PySide6 signals passing booleans or other junk
+            if text is None:
+                text = self.input_field.toPlainText().strip()
             
-        if not text: return
+            if not text:
+                return
 
-        # 1. Navigation Handling (cd command)
-        if not is_tool_result and text.startswith("cd "):
+            print(f"[AURA_UI] Processing: {text[:30]}...")
 
-            target = text[3:].strip()
-            if target == "~":
-                target = os.path.expanduser("~")
+            # 1. Navigation Handling (cd command)
+            if not is_tool_result and text.startswith("cd "):
+                target = text[3:].strip()
+                if target == "~":
+                    target = os.path.expanduser("~")
 
-            new_path = os.path.normpath(os.path.join(self.engine.project_root, target))
+                new_path = os.path.normpath(os.path.join(self.engine.project_root, target))
 
-            if os.path.isdir(new_path):
-                self.engine.project_root = new_path
-                # Update UI elements representing directory
-                self.dir_label.setText(f"DIR: {os.path.basename(new_path)}")
-                self.dir_label.setToolTip(new_path)
-                branch = self.get_git_branch(new_path)
-                self.workspace_label.setText(f"[{new_path}] {branch}".strip())
-                safe_path = html.escape(new_path)
-                self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Context shifted to: {safe_path}</i></p>")
+                if os.path.isdir(new_path):
+                    self.engine.project_root = new_path
+                    # Update UI elements representing directory
+                    self.dir_label.setText(f"DIR: {os.path.basename(new_path)}")
+                    self.dir_label.setToolTip(new_path)
+                    branch = self.get_git_branch(new_path)
+                    self.workspace_label.setText(f"[{new_path}] {branch}".strip())
+                    safe_path = html.escape(new_path)
+                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Context shifted to: {safe_path}</i></p>")
+                    self.trigger_glitch()
+                else:
+                    safe_target = html.escape(target)
+                    self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ERROR: Directory not found: {safe_target}</i></p>")
+
+                self.input_field.clear()
+                return
+
+            if not is_tool_result and text.startswith("/"):
+                cmd = text[1:].lower()
+
+                if cmd == "stop" or cmd == "abort":
+                    self.abort_generation()
+                    self.trigger_glitch("wipe")
+                    self.input_field.clear()
+                    return
+
+                if cmd == "clear":
+                    self.engine.clear_history()
+                    self.messages = []
+                    self.render_messages()
+                    self.trigger_glitch("wipe")
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Context Purged.</i></p>")
+                    self.input_field.clear()
+                    return
+
+                if cmd == "kill":
+                    self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // EXECUTING NUCLEAR OPTION: KILLING OLLAMA SERVER...</i></p>")
+                    subprocess.run(["sudo", "systemctl", "stop", "ollama"], check=False)
+                    self.abort_generation()
+                    self.input_field.clear()
+                    return
+
+                alias_map = {
+                    "phi": "phi3:mini",
+                    "qwen": "aura-qwen",
+                    "coder": "qwen2.5-coder:7b",
+                    "deep": "aura-deepseek",
+                    "think": "deepseek-r1:1.5b",
+                    "moon": "moondream",
+                    "sam": "samantha-mistral"
+                }
+
                 self.trigger_glitch()
-            else:
-                safe_target = html.escape(target)
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // ERROR: Directory not found: {safe_target}</i></p>")
 
-            self.input_field.clear()
-            return
+                if cmd == "commands":
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // COMMANDS & MODEL OPTIONS:</i></p>")
+                    self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/commands</b> - Show this list</p>")
+                    self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model aura-qwen</b> - Default Living Hub model</p>")
+                    self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model aura-deepseek</b> - Logic-focused Hub model</p>")
+                    self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model deepseek-r1:1.5b</b> - Thinking model</p>")
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>MODEL ALIASES:</i> /qwen, /deep, /think, /coder, /phi, /moon, /sam</p>")
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>OPERATION MODES:</i> safe, developer, installer, admin-lite, danger-confirmed</p>")
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>GH CLI:</i> try <b>gh auth status</b>, <b>gh repo view</b>, <b>gh pr list</b>, <b>gh workflow list</b></p>")
+                    self.input_field.clear()
+                    return
+                if cmd == "help":
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // TUNED VOICES:</i></p>")
+                    for alias, m_id in alias_map.items():
+                        if m_id in OllamaClient.MODELS:
+                            safe_model_name = html.escape(OllamaClient.MODELS[m_id]['name'])
+                            safe_alias = html.escape(alias)
+                            self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{safe_alias}</b> - {safe_model_name}</p>")
+                    self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>TYPE /COMMANDS FOR MODELS, MODES, AND GH SHORTCUTS</i></p>")
+                    self.input_field.clear()
+                    return
 
-        if not is_tool_result and text.startswith("/"):
-            cmd = text[1:].lower()
+                if cmd == "models":
+                    self.populate_models_list()
+                    self.input_field.clear()
+                    return
 
-            if cmd == "stop" or cmd == "abort":
-                self.abort_generation()
-                self.input_field.clear()
-                return
+                if cmd.startswith("model "):
+                    target = cmd[6:].strip()
+                    for display_name, m_id in self.model_mapping.items():
+                        if target in m_id.lower():
+                            self.model = m_id
+                            self.engine.current_model = m_id
+                            self.engine.clear_history()
+                            self._sync_model_selector()
+                            friendly_name = OllamaClient.MODELS.get(m_id, {"name": f"[RAW] {m_id}"})["name"]
+                            safe_friendly_name = html.escape(friendly_name)
+                            self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
+                            self.save_session()
+                            self.input_field.clear()
+                            return
+                    
+                    safe_target = html.escape(target)
+                    self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Model not found: {safe_target}</i></p>")
+                    self.input_field.clear()
+                    return
 
-            if cmd == "kill":
-                self.output_area.append("<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // EXECUTING NUCLEAR OPTION: KILLING OLLAMA SERVER...</i></p>")
-                subprocess.run(["sudo", "systemctl", "stop", "ollama"], check=False)
-                self.abort_generation()
-                self.input_field.clear()
-                return
-
-            alias_map = {
-                "phi": "phi3:mini",
-                "qwen": "aura-qwen",
-                "coder": "qwen2.5-coder:1.5b",
-                "deep": "aura-deepseek",
-                "think": "deepseek-r1:1.5b",
-                "moon": "moondream",
-                "sam": "samantha-mistral"
-            }
-
-            self.trigger_glitch()
-
-            if cmd == "commands":
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // COMMANDS & MODEL OPTIONS:</i></p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/commands</b> - Show this list</p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model aura-qwen</b> - Default Living Hub model</p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model aura-deepseek</b> - Logic-focused Hub model</p>")
-                self.output_area.append("<p style='color: #D4AF37; font-family: Monospace;'><b>/model deepseek-r1:1.5b</b> - Thinking model</p>")
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>MODEL ALIASES:</i> /qwen, /deep, /think, /coder, /phi, /moon, /sam</p>")
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>OPERATION MODES:</i> safe, developer, installer, admin-lite, danger-confirmed</p>")
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>GH CLI:</i> try <b>gh auth status</b>, <b>gh repo view</b>, <b>gh pr list</b>, <b>gh workflow list</b></p>")
-                self.input_field.clear()
-                return
-            if cmd == "help":
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // TUNED VOICES:</i></p>")
-                for alias, m_id in alias_map.items():
-                    if m_id in OllamaClient.MODELS:
-                        safe_model_name = html.escape(OllamaClient.MODELS[m_id]['name'])
-                        safe_alias = html.escape(alias)
-                        self.output_area.append(f"<p style='color: #D4AF37; font-family: Monospace;'><b>/{safe_alias}</b> - {safe_model_name}</p>")
-                self.output_area.append("<p style='color: #404040; font-family: Monospace;'><i>TYPE /COMMANDS FOR MODELS, MODES, AND GH SHORTCUTS</i></p>")
-                self.input_field.clear()
-                return
-
-            if cmd == "models":
-                self.discover_models()
-                self.input_field.clear()
-                return
-
-            if cmd.startswith("model "):
-                target = cmd[6:].strip()
-                for display_name, m_id in self.model_mapping.items():
-                    if target in m_id.lower():
-                        self.model = m_id
-                        self.engine.current_model = m_id
-                        self.engine.clear_history()
-                        self._sync_model_selector()
-                        friendly_name = OllamaClient.MODELS.get(m_id, {"name": f"[RAW] {m_id}"})["name"]
-                        safe_friendly_name = html.escape(friendly_name)
-                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
-                        self.save_session()
-                        self.input_field.clear()
-                        return
-                
-                safe_target = html.escape(target)
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Model not found: {safe_target}</i></p>")
-                self.input_field.clear()
-                return
-
-            if cmd in alias_map:
-                target_model = alias_map[cmd]
-                if target_model in self.models:
+                if cmd in alias_map:
+                    target_model = alias_map[cmd]
                     self.model = target_model
                     self.engine.current_model = target_model
                     self.engine.clear_history()
@@ -999,44 +1075,61 @@ class AuraWindow(QMainWindow):
                     self.input_field.clear()
                     return
 
-            found = False
-            for key in self.models:
-                if cmd in key.lower():
-                    self.model = key
-                    self.engine.current_model = key
-                    self.engine.clear_history()
-                    self._sync_model_selector()
-                    friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
-                    safe_friendly_name = html.escape(friendly_name)
-                    self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
-                    found = True
-                    self.save_session()
-                    break
+                found = False
+                for key in self.models:
+                    if cmd in key.lower():
+                        self.model = key
+                        self.engine.current_model = key
+                        self.engine.clear_history()
+                        self._sync_model_selector()
+                        friendly_name = OllamaClient.MODELS.get(self.model, {"name": self.model})["name"]
+                        safe_friendly_name = html.escape(friendly_name)
+                        self.output_area.append(f"<p style='color: #404040; font-family: Monospace;'><i>SYSTEM // Switched to {safe_friendly_name} (Context Cleared)</i></p>")
+                        found = True
+                        self.save_session()
+                        break
+                
+                if not found:
+                    safe_cmd = html.escape(cmd)
+                    self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Unknown model: {safe_cmd}</i></p>")
+                
+                self.input_field.clear()
+                return
+
+            user_msg = {"role": "user", "content": text}
             
-            if not found:
-                safe_cmd = html.escape(cmd)
-                self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // Unknown model: {safe_cmd}</i></p>")
+            # 👁️ WATCHFUL EYE: Vision Injection
+            if self.model and "moon" in self.model.lower() and hasattr(self, 'vision_worker') and self.vision_worker.buffer:
+                latest_frame = self.vision_worker.buffer[-1]
+                user_msg["images"] = [latest_frame]
+                self.ghost_log.log("VISION_INJECTION: LATEST_FRAME_ATTACHED")
+
+            self.messages.append(user_msg)
+            self.current_response_text = ""
+            self.pending_message = {"role": "assistant", "model": self.model or "Aura", "content": ""}
+            self.render_messages()
             
             self.input_field.clear()
-            return
+            self.input_field.setEnabled(False)
+            self.abort_btn.setVisible(True)
+            self.visualizer.start()
+            self.ghost_log.log(f"API_STREAM_START: MODEL({self.model})")
 
-        self.messages.append({"role": "user", "content": text})
-        self.current_response_text = ""
-        self.pending_message = {"role": "assistant", "model": self.model, "content": ""}
-        self.render_messages()
-        
-        self.input_field.clear()
-        self.input_field.setEnabled(False)
-        self.abort_btn.setVisible(True)
-        self.visualizer.start()
-        self.ghost_log.log(f"API_STREAM_START: MODEL({self.model})")
+            self.worker = ChatWorker(self.model, text, self.engine, self.gen_options)
+            self.worker.chunk_received.connect(self.handle_chunk)
+            self.worker.finished.connect(self.handle_finished)
+            self.worker.start()
 
-        self.worker = ChatWorker(self.model, text, self.engine, self.gen_options)
-        self.worker.chunk_received.connect(self.handle_chunk)
-        self.worker.finished.connect(self.handle_finished)
-        self.worker.start()
+        except Exception as e:
+            print(f"[AURA_UI] CRASH in process_input: {e}")
+            self.trigger_glitch("critical")
+            self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // INPUT_PROCESS_CRASH: {html.escape(str(e))}</i></p>")
+            self.input_field.setEnabled(True)
+            self.input_field.setFocus()
 
     def handle_chunk(self, chunk: str):
+        if chunk.startswith("\n[Aura Error:"):
+            self.trigger_glitch("critical")
         self.current_response_text += chunk
         if self.pending_message:
             self.pending_message["content"] = self.current_response_text
@@ -1105,6 +1198,7 @@ class AuraWindow(QMainWindow):
             safe_cmd = html.escape(command_name)
             self.output_area.append(f"<p style='color: #00e6e6; font-family: Monospace;'><i>SYSTEM // EXECUTING TOOL: {safe_cmd}</i></p>")
             self.ghost_log.log(f"TOOL_EXECUTION: {command_name}")
+            self.trigger_glitch("subtle")
 
             # Execute via Engine Registry
             from aura_core.engine import ToolRegistry
@@ -1123,11 +1217,13 @@ class AuraWindow(QMainWindow):
 
             observation = f"<tool_result>\n{result}\n</tool_result>"
             self.ghost_log.log("TOOL_RESULT_INJECTED")
+            self.trigger_glitch("subtle")
             
             # Autonomous Re-entry
             self.process_input(text=observation, is_tool_result=True)
 
         except Exception as e:
+            self.trigger_glitch("critical")
             safe_e = html.escape(str(e))
             self.output_area.append(f"<p style='color: #FF5555; font-family: Monospace;'><i>SYSTEM // TOOL_PARSE_ERROR: {safe_e}</i></p>")
             self.input_field.setEnabled(True)

@@ -95,24 +95,29 @@ class ToolRegistry:
         if not command:
             return "Error: command is required"
         try:
-            # Prevent command injection by avoiding shell=True
-            parsed_command = shlex.split(command)
+            hub_ip = "100.100.181.59"
+            safe_command = shlex.quote(command)
+            # Route to Da-HP Docker Sandbox
+            remote_cmd = [
+                "ssh", f"daripper@{hub_ip}",
+                f"docker run --rm alpine:latest sh -c {safe_command}"
+            ]
             result = subprocess.run(
-                parsed_command,
+                remote_cmd,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=45
             )
             output = result.stdout
             if result.stderr:
                 output += "\nSTDERR:\n" + result.stderr
             if len(output) > 2000:
-                 output = output[:2000] + "\n...[OUTPUT TRUNCATED FOR CONTEXT LIMIT]"
-            return output if output else f"Command executed successfully with exit code {result.returncode}"
+                 output = output[:2000] + "\n...[SANDBOX OUTPUT TRUNCATED]"
+            return output if output else f"Sandbox execution successful (Exit: {result.returncode})"
         except subprocess.TimeoutExpired:
-            return "Error: Command timed out after 30 seconds"
+            return "Error: Sandbox timeout after 45 seconds"
         except Exception as e:
-            return f"Error executing command: {e}"
+            return f"Sandbox Error: {e}"
 
     @staticmethod
     def aider_fix(args: dict) -> str:
@@ -211,6 +216,60 @@ class ToolRegistry:
         except Exception as e:
             return f"Error executing Termux command: {e}"
 
+    @staticmethod
+    def long_term_memory(args: dict) -> str:
+        """Phase 3: Persistent RAG implementation via SQLite on Da-HP."""
+        action = args.get("action", "search") 
+        content = args.get("content", "")
+        hub_ip = "100.100.181.59"
+        
+        try:
+            db_cmd = f"sqlite3 ~/aura_memory.db 'CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY, content TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);'"
+            if action == "store":
+                safe_content = shlex.quote(content)
+                db_cmd += f" && sqlite3 ~/aura_memory.db \"INSERT INTO memory (content) VALUES ({safe_content});\""
+            else:
+                safe_query = shlex.quote(f"%{content}%")
+                db_cmd += f" && sqlite3 ~/aura_memory.db \"SELECT content FROM memory WHERE content LIKE {safe_query} ORDER BY ts DESC LIMIT 5;\""
+            
+            remote_cmd = ["ssh", f"daripper@{hub_ip}", db_cmd]
+            result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=10)
+            return result.stdout if result.stdout else "Memory operation successful."
+        except Exception as e:
+            return f"Memory Error: {e}"
+
+    @staticmethod
+    def check_cellular(args: dict) -> str:
+        """Phase 4: Cellular Telemetry Bridge via Da-Pine."""
+        hub_ip = "100.100.181.59"
+        pine_ip = "172.16.42.1"
+        try:
+            remote_cmd = [
+                "ssh", f"daripper@{hub_ip}",
+                f"sshpass -p '0' ssh -o StrictHostKeyChecking=no daripper@{pine_ip} 'mmcli -m any --messaging-list-sms'"
+            ]
+            result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=15)
+            return result.stdout if result.stdout else "No SMS messages found or modem offline."
+        except Exception as e:
+            return f"Cellular Error: {e}"
+
+    @staticmethod
+    def voice_synthesis(args: dict) -> str:
+        """Phase 4: Local Audio Pipeline (TTS)."""
+        text = args.get("text", "")
+        if not text:
+            return "Error: text is required"
+        try:
+            # Attempt local synthesis on MacBook (Fedora Asahi)
+            # Falling back to silent logging if no TTS engine is found
+            if os.system(f"which spd-say > /dev/null 2>&1") == 0:
+                subprocess.Popen(["spd-say", "-t", "female1", text])
+                return "Audio synthesized locally via spd-say."
+            else:
+                return f"[TTS_MOCK] Aura says: {text}"
+        except Exception as e:
+            return f"Audio Error: {e}"
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         methods = {
@@ -220,6 +279,9 @@ class ToolRegistry:
             "grep_search": cls.grep_search,
             "list_directory": cls.list_directory,
             "run_shell_command": cls.run_shell_command,
+            "long_term_memory": cls.long_term_memory,
+            "check_cellular": cls.check_cellular,
+            "voice_synthesis": cls.voice_synthesis,
             "aider_fix": cls.aider_fix,
             "shizuku_command": cls.shizuku_command,
             "termux_command": cls.termux_command
