@@ -138,8 +138,8 @@ fun ChatScreen(
     // Listen for Engine Handover
     LaunchedEffect(Unit) {
         bridge.setOnEngineSwitchListener { local ->
-            isLocalMode = it
-            ghostLog = ghostLog + "ENGINE_SWITCH: ${if (it) "LOCAL_EDGE" else "REMOTE_HUB"}"
+            isLocalMode = local
+            ghostLog = ghostLog + "ENGINE_SWITCH: ${if (local) "LOCAL_EDGE" else "REMOTE_HUB"}"
             if (hapticsEnabled) hapticHelper.stateAwakening()
         }
     }
