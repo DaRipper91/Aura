@@ -52,6 +52,16 @@ Aura embodies four distinct sub-identities to maintain systemic integrity:
 
 ---
 
+## 🚀 GETTING STARTED
+
+### 🪟 Windows (Spoke Client)
+1.  **Download:** Grab the latest `Aura_Setup_v1.0.6.exe` from the [Releases](https://github.com/DaRipper91/Aura/releases) tab.
+2.  **S Mode Note:** If using a budget HP (like the 14-ep2011wm), you **must** switch out of **Windows 11 S Mode** via the Microsoft Store to run the installer.
+3.  **Tailscale:** Ensure Tailscale is installed and logged in to the same Tailnet as `Da-HP`.
+4.  **Connect:** Open Aura, enter the Tailscale IP of your Hub (e.g., `100.100.181.59`) in the settings, and start computing.
+
+---
+
 ## 🗺️ MASTER ROADMAP
 
 The evolution of Aura is formally structured across four phases. See the full [Master Roadmap](docs/AURA_ROADMAP.md) for execution details.

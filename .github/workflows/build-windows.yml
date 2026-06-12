@@ -29,7 +29,7 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --onefile --windowed --paths python --add-data "python/aura/ui/icon.svg;aura/ui" --add-data "python/aura/ui/fonts/*.ttf;aura/ui/fonts" --name Aura_v1.0.5_Lite python/main.py
+        pyinstaller --onefile --windowed --paths python --add-data "python/aura/ui/icon.svg;aura/ui" --add-data "python/aura/ui/fonts/*.ttf;aura/ui/fonts" --name Aura_v1.0.6_Lite python/main.py
 
     - name: Setup NSIS
       run: |
@@ -43,8 +43,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          dist/Aura_v1.0.5_Lite.exe
-          dist/Aura_Setup_v1.0.5.exe
+          dist/Aura_v1.0.6_Lite.exe
+          dist/Aura_Setup_v1.0.6.exe
         tag_name: rolling-release
         name: "Aura // Latest Rolling Build"
         body: "Automated build from branch: ${{ github.ref_name }} (Commit: ${{ github.sha }})"
