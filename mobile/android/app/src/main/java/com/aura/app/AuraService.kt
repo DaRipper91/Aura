@@ -78,8 +78,14 @@ class AuraService : Service() {
                         bufferIndex = (bufferIndex + 1) % audioBuffer.size
                     }
                     
-                    // 🧠 Simple VAD / Wake Word Logic (Placeholder)
-                    // TODO: Integrate MediaPipe Audio Task for Wake Aura
+                    // 🧠 Phase 6.3.2: Simple Energy VAD (Voice Activity Detection)
+                    val energy = tempBuffer.map { it * it }.average()
+                    if (energy > 0.01) { // Threshold for "Speech"
+                        android.util.Log.d("AuraAudio", "Speech activity detected (Energy: $energy)")
+                        // Trigger transcription on the last 5 seconds
+                        val transcription = whisperEngine.transcribe(audioBuffer)
+                        // TODO: Broadcast result to UI
+                    }
                 }
             }
             audioRecord.stop()
