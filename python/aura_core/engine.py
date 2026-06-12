@@ -25,7 +25,9 @@ class ToolRegistry:
         "voice_synthesis": "SAFE",
         "check_satellite_sensors": "SAFE",
         "dispatch_task": "RISKY",
-        "fleet_health_check": "SAFE"
+        "fleet_health_check": "SAFE",
+        "get_mesh_origin": "SAFE",
+        "trigger_failover": "RISKY"
     }
 
     _security_callback = None
@@ -361,6 +363,10 @@ class ToolRegistry:
             # Route to PinePhone Modem/System
             if tool == "check_cellular":
                 return ToolRegistry.check_cellular(tool_args)
+            if tool == "get_location":
+                return ToolRegistry.get_mesh_origin(tool_args)
+            if tool == "failover":
+                return ToolRegistry.trigger_failover(tool_args)
             return f"Error: Tool '{tool}' not supported on node '{node_id}'"
             
         elif node_id in ["satellite", "pixel"]:
@@ -424,6 +430,35 @@ class ToolRegistry:
 
         return json.dumps(health_report, indent=2)
 
+    @staticmethod
+    def get_mesh_origin(args: dict) -> str:
+        """Phase 6.4.1: Fetch PinePhone GPS coordinates as the mesh center."""
+        hub_ip = "100.100.181.59"
+        pine_ip = "100.89.146.20"
+        try:
+            cmd = "/usr/local/bin/aura-tools/get-location.sh"
+            remote_cmd = [
+                "ssh", f"daripper@{hub_ip}",
+                f"sshpass -p '0' ssh -o StrictHostKeyChecking=no daripper@{pine_ip} {shlex.quote(cmd)}"
+            ]
+            result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=20)
+            return result.stdout if result.stdout else "Location unavailable (GPS Fix pending)."
+        except Exception as e:
+            return f"Location Error: {e}"
+
+    @staticmethod
+    def trigger_failover(args: dict) -> str:
+        """Phase 6.4.2: Switch Hub traffic to PinePhone 5G failover."""
+        hub_ip = "100.100.181.59"
+        mode = args.get("mode", "enable") # enable/disable
+        try:
+            cmd = f"/home/daripper/archive/scripts/setup_usb_share.sh" if mode == "enable" else "sudo sysctl -w net.ipv4.ip_forward=0"
+            remote_cmd = ["ssh", f"daripper@{hub_ip}", cmd]
+            result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=15)
+            return f"Failover {mode} successfully."
+        except Exception as e:
+            return f"Failover Error: {e}"
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         # 🛡️ SENTINEL: Enforcement Point
@@ -455,7 +490,9 @@ class ToolRegistry:
             "termux_command": cls.termux_command,
             "check_satellite_sensors": cls.check_satellite_sensors,
             "dispatch_task": cls.dispatch_task,
-            "fleet_health_check": cls.fleet_health_check
+            "fleet_health_check": cls.fleet_health_check,
+            "get_mesh_origin": cls.get_mesh_origin,
+            "trigger_failover": cls.trigger_failover
         }
         if name in methods:
             return methods[name](args)
@@ -729,7 +766,9 @@ class OllamaClient:
             "12. check_cellular: {\"action\": \"get_sms\"|\"get_status\"} (Query PinePhone Modem)\n"
             "13. voice_synthesis: {\"text\": str} (Speak through local Fedora host)\n"
             "14. dispatch_task: {\"node_id\": \"hp\"|\"pine\"|\"satellite\"|\"desktop\", \"tool\": str, \"args\": dict} (Route task to specific node)\n"
-            "15. fleet_health_check: {} (Aggregate thermals and battery levels from all nodes)\n\n"
+            "15. fleet_health_check: {} (Aggregate thermals and battery levels from all nodes)\n"
+            "16. get_mesh_origin: {} (Query PinePhone GPS for physical mesh center)\n"
+            "17. trigger_failover: {\"mode\": \"enable\"|\"disable\"} (Toggle 5G failover routing via PinePhone)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute a tool, output strictly a JSON block matching the signature. For example:\n"

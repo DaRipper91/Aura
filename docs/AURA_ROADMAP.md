@@ -28,5 +28,11 @@
 - [x] **Phase 6.2: The Sentinel Heart (Proactive Maintenance):** Autonomous fleet health monitor. Auto-throttle on thermal spikes, battery preservation sync across all mobile nodes.
 - [ ] **Phase 6.3: The Voice of Aura (Whisper 2.0):** Integration of `whisper-tflite` for hands-free, "Always Listening" command recognition on the Satellite and MacBook.
 
+## PHASE 6.4: DA-PINE EVOLUTION (Resilience)
+- [ ] **Phase 6.4.1: Location Anchor (Core GPS):** Expose PinePhone's GPS to the Hub Agent to establish a physical "Mesh Origin".
+- [ ] **Phase 6.4.2: Dual-WAN Failover (Auto-Route):** Autonomous switching between Wi-Fi and 5G to ensure Hub connectivity never drops.
+- [ ] **Phase 6.4.3: Secure SMS Vault (Hardware 2FA):** Encrypted SMS retrieval gated by Satellite biometric challenges.
+- [ ] **Phase 6.4.4: The Distant Ear (Remote Whisper):** Port the lightweight Whisper listener to the PinePhone for house-wide hands-free input.
+
 ---
-**STATUS: PHASE 6.2_DEPLOYED // FLEET_VITALITY_ACTIVE**
+**STATUS: PHASE 6.4_PREPARATION // WAITING FOR BRIDGE RESURRECTION**
