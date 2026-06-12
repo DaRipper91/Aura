@@ -27,7 +27,9 @@ class ToolRegistry:
         "dispatch_task": "RISKY",
         "fleet_health_check": "SAFE",
         "get_mesh_origin": "SAFE",
-        "trigger_failover": "RISKY"
+        "trigger_failover": "RISKY",
+        "manage_hub_resources": "RISKY",
+        "log_system_event": "SAFE"
     }
 
     _security_callback = None
@@ -132,15 +134,17 @@ class ToolRegistry:
     @staticmethod
     def run_shell_command(args: dict) -> str:
         command = args.get("command")
+        persistent = args.get("persistent", True) # Default to persistent for SafeBox
         if not command:
             return "Error: command is required"
         try:
             hub_ip = "100.100.181.59"
             safe_command = shlex.quote(command)
-            # Route to Da-HP Docker Sandbox
+            # 🛡️ SAFEBOX: Use a persistent Docker volume
+            volume_flag = "-v aura_sandbox_data:/workspace" if persistent else ""
             remote_cmd = [
                 "ssh", f"daripper@{hub_ip}",
-                f"docker run --rm alpine:latest sh -c {safe_command}"
+                f"docker run --rm {volume_flag} -w /workspace alpine:latest sh -c {safe_command}"
             ]
             result = subprocess.run(
                 remote_cmd,
@@ -459,6 +463,53 @@ class ToolRegistry:
         except Exception as e:
             return f"Failover Error: {e}"
 
+    @staticmethod
+    def manage_hub_resources(args: dict) -> str:
+        """Phase 6.5.1 & 6.5.4: Hot-swap models and adjust CPU performance."""
+        hub_ip = "100.100.181.59"
+        action = args.get("action") # "swap_model", "set_performance"
+        
+        try:
+            if action == "swap_model":
+                target_model = args.get("model")
+                if not target_model: return "Error: model name required"
+                # Command to unload current and preload new
+                cmd = f"curl -X POST http://localhost:11434/api/generate -d '{{\"model\": \"{target_model}\", \"keep_alive\": -1}}'"
+                res = subprocess.run(["ssh", f"daripper@{hub_ip}", cmd], capture_output=True, text=True, timeout=30)
+                return f"Model {target_model} pre-loaded onto Hub."
+                
+            elif action == "set_performance":
+                profile = args.get("profile", "performance") # "performance", "powersave", "schedutil"
+                # Requires 'cpupower' tool on Arch Zen Hub
+                cmd = f"echo '0' | sudo -S cpupower frequency-set -g {profile}"
+                res = subprocess.run(["ssh", f"daripper@{hub_ip}", cmd], capture_output=True, text=True, timeout=10)
+                return f"Hub CPU governor set to {profile}."
+                
+            return f"Error: Unknown action '{action}'"
+        except Exception as e:
+            return f"Resource Error: {e}"
+
+    @staticmethod
+    def log_system_event(args: dict) -> str:
+        """Phase 6.5.3: Record mesh-wide system events into the Hub Archive."""
+        hub_ip = "100.100.181.59"
+        event = args.get("event")
+        node = args.get("node", "unknown")
+        
+        if not event: return "Error: event is required"
+        
+        try:
+            db_cmd = "sqlite3 ~/aura_telemetry.db 'CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, node TEXT, event TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);'"
+            safe_event = shlex.quote(event)
+            safe_node = shlex.quote(node)
+            db_cmd += f" && sqlite3 ~/aura_telemetry.db \"INSERT INTO events (node, event) VALUES ({safe_node}, {safe_event});\""
+            
+            remote_cmd = ["ssh", f"daripper@{hub_ip}", db_cmd]
+            subprocess.run(remote_cmd, capture_output=True, text=True, timeout=10)
+            return f"Event logged to Ghost Archive."
+        except Exception as e:
+            return f"Logging Error: {e}"
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         # 🛡️ SENTINEL: Enforcement Point
@@ -492,7 +543,9 @@ class ToolRegistry:
             "dispatch_task": cls.dispatch_task,
             "fleet_health_check": cls.fleet_health_check,
             "get_mesh_origin": cls.get_mesh_origin,
-            "trigger_failover": cls.trigger_failover
+            "trigger_failover": cls.trigger_failover,
+            "manage_hub_resources": cls.manage_hub_resources,
+            "log_system_event": cls.log_system_event
         }
         if name in methods:
             return methods[name](args)
@@ -757,7 +810,7 @@ class OllamaClient:
             "3. replace: {\"file_path\": str, \"old_string\": str, \"new_string\": str}\n"
             "4. grep_search: {\"pattern\": str, \"dir_path\": str}\n"
             "5. list_directory: {\"dir_path\": str}\n"
-            "6. run_shell_command: {\"command\": str}\n"
+            "6. run_shell_command: {\"command\": str, \"persistent\": bool} (Execute in persistent Hub sandbox)\n"
             "7. aider_fix: {\"file_path\": str, \"instructions\": str}\n"
             "8. shizuku_command: {\"command\": str} (Execute elevated Android commands via rish)\n"
             "9. termux_command: {\"command\": str} (Execute commands in Termux environment)\n"
@@ -768,7 +821,9 @@ class OllamaClient:
             "14. dispatch_task: {\"node_id\": \"hp\"|\"pine\"|\"satellite\"|\"desktop\", \"tool\": str, \"args\": dict} (Route task to specific node)\n"
             "15. fleet_health_check: {} (Aggregate thermals and battery levels from all nodes)\n"
             "16. get_mesh_origin: {} (Query PinePhone GPS for physical mesh center)\n"
-            "17. trigger_failover: {\"mode\": \"enable\"|\"disable\"} (Toggle 5G failover routing via PinePhone)\n\n"
+            "17. trigger_failover: {\"mode\": \"enable\"|\"disable\"} (Toggle 5G failover routing via PinePhone)\n"
+            "18. manage_hub_resources: {\"action\": \"swap_model\"|\"set_performance\", \"model\": str, \"profile\": str} (Hot-swap models or adjust Hub CPU governor)\n"
+            "19. log_system_event: {\"event\": str, \"node\": str} (Archive mesh-wide system events)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute a tool, output strictly a JSON block matching the signature. For example:\n"

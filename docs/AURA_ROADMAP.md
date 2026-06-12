@@ -34,5 +34,11 @@
 - [ ] **Phase 6.4.3: Secure SMS Vault (Hardware 2FA):** Encrypted SMS retrieval gated by Satellite biometric challenges.
 - [ ] **Phase 6.4.4: The Distant Ear (Remote Whisper):** Port the lightweight Whisper listener to the PinePhone for house-wide hands-free input.
 
+## PHASE 6.5: DA-HP HUB ASCENSION (Agility)
+- [ ] **Phase 6.5.1: Dynamic VRAM Swapper (FlexBrain):** Tool to hot-swap Ollama models on-demand to optimize memory for specialized heavy tasks.
+- [ ] **Phase 6.5.2: Persistent Work Volumes (SafeBox):** Maintain persistent Docker volumes for the sandbox to speed up multi-turn compilation tasks.
+- [ ] **Phase 6.5.3: The Ghost Archive (Mesh History):** Centralized SQLite telemetry vault on the Hub to record mesh-wide system events.
+- [ ] **Phase 6.5.4: Autonomous Performance Tuning (Zen-Governor):** Automatic switching between CPU governors based on task intensity and Hub thermals.
+
 ---
-**STATUS: PHASE 6.4_PREPARATION // WAITING FOR BRIDGE RESURRECTION**
+**STATUS: PHASE 6.5_INITIATED // MAXIMIZING HUB POTENTIAL**
