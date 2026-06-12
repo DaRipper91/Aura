@@ -226,11 +226,15 @@ class ToolRegistry:
         try:
             db_cmd = f"sqlite3 ~/aura_memory.db 'CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY, content TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);'"
             if action == "store":
-                safe_content = shlex.quote(content)
-                db_cmd += f" && sqlite3 ~/aura_memory.db \"INSERT INTO memory (content) VALUES ({safe_content});\""
+                sql_content = content.replace("'", "''")
+                sql_query = f"INSERT INTO memory (content) VALUES ('{sql_content}');"
+                safe_sql = shlex.quote(sql_query)
+                db_cmd += f" && sqlite3 ~/aura_memory.db {safe_sql}"
             else:
-                safe_query = shlex.quote(f"%{content}%")
-                db_cmd += f" && sqlite3 ~/aura_memory.db \"SELECT content FROM memory WHERE content LIKE {safe_query} ORDER BY ts DESC LIMIT 5;\""
+                sql_content = f"%{content.replace(chr(39), chr(39)*2)}%"
+                sql_query = f"SELECT content FROM memory WHERE content LIKE '{sql_content}' ORDER BY ts DESC LIMIT 5;"
+                safe_sql = shlex.quote(sql_query)
+                db_cmd += f" && sqlite3 ~/aura_memory.db {safe_sql}"
             
             remote_cmd = ["ssh", f"daripper@{hub_ip}", db_cmd]
             result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=10)
