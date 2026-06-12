@@ -5,26 +5,69 @@ import android.os.Looper
 import com.chaquo.python.Python
 import com.chaquo.python.PyObject
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
 class AuraBridge(private val context: android.content.Context) {
     private var pythonEngine: PyObject? = null
     private var localEngine: LocalInferenceEngine? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var useLocalInference = false
     private val prefs = context.getSharedPreferences("aura_prefs", android.content.Context.MODE_PRIVATE)
+    private val biometricHelper = if (context is androidx.fragment.app.FragmentActivity) BiometricHelper(context) else null
 
     init {
         localEngine = LocalInferenceEngine(context)
         try {
             val py = Python.getInstance()
-            // Loads aura_core/engine.py (Full Python Build)
             val engineModule = py.getModule("aura_core.engine")
             pythonEngine = engineModule.callAttr("OllamaClient")
             
             // 💾 PERSISTENCE: Load saved URL or use default
             val savedUrl = prefs.getString("orchestrator_url", "http://10.0.0.1:11434")
             pythonEngine?.callAttr("set_base_url", savedUrl)
+
+            // 🛡️ SENTINEL: Register Security Handler
+            pythonEngine?.callAttr("register_security_handler", SecurityHandler())
         } catch (e: Exception) {
             android.util.Log.e("AuraBridge", "Python Engine Initialization Failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Internal handler passed to Python to manage biometric gating.
+     */
+    inner class SecurityHandler {
+        fun __call__(toolName: String, challenge: String): PyObject? {
+            val py = Python.getInstance()
+            val resultDict = py.getBuiltins().callAttr("dict")
+            
+            if (biometricHelper == null) {
+                resultDict.callAttr("__setitem__", "status", "ERROR")
+                return resultDict
+            }
+
+            val latch = CountDownLatch(1)
+            var authStatus = "REJECTED"
+            var signature = ""
+
+            mainHandler.post {
+                biometricHelper.authenticateForTool(toolName, challenge, { sig ->
+                    authStatus = "APPROVED"
+                    signature = sig
+                    latch.countDown()
+                }, { error ->
+                    authStatus = "REJECTED"
+                    latch.countDown()
+                })
+            }
+
+            // Wait for user input (Max 60s)
+            latch.await(60, TimeUnit.SECONDS)
+
+            resultDict.callAttr("__setitem__", "status", authStatus)
+            resultDict.callAttr("__setitem__", "signature", signature)
+            return resultDict
         }
     }
 

@@ -9,6 +9,29 @@ from typing import Generator, Optional, List, Dict
 from aura_core.mandates import aura_component
 
 class ToolRegistry:
+    # 🛡️ SENTINEL POLICY: Categorize tools by risk
+    SECURITY_POLICY = {
+        "read_file": "SAFE",
+        "write_file": "RISKY",
+        "replace": "RISKY",
+        "grep_search": "SAFE",
+        "list_directory": "SAFE",
+        "run_shell_command": "RISKY",
+        "aider_fix": "RISKY",
+        "shizuku_command": "RISKY",
+        "termux_command": "RISKY",
+        "long_term_memory": "SAFE",
+        "check_cellular": "SAFE",
+        "voice_synthesis": "SAFE"
+    }
+
+    _security_callback = None
+
+    @classmethod
+    def set_security_callback(cls, callback):
+        """Allows mobile/desktop to register an authorization handler."""
+        cls._security_callback = callback
+
     @staticmethod
     def read_file(args: dict) -> str:
         path = args.get("file_path")
@@ -272,6 +295,20 @@ class ToolRegistry:
 
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
+        # 🛡️ SENTINEL: Enforcement Point
+        policy = cls.SECURITY_POLICY.get(name, "SAFE")
+        if policy == "RISKY" and cls._security_callback:
+            import uuid
+            challenge = f"AUTH_CHALLENGE_{uuid.uuid4().hex}"
+            # The callback should return a dict with 'status' and 'signature'
+            # For Android, this triggers the BiometricPrompt
+            auth_result = cls._security_callback(name, challenge)
+            
+            if not auth_result or auth_result.get("status") != "APPROVED":
+                return f"Security Violation: Tool '{name}' execution DENIED by user biometrics."
+            
+            # TODO: Add crypto verification of the signature here in Phase 5.2
+
         methods = {
             "read_file": cls.read_file,
             "write_file": cls.write_file,
@@ -439,6 +476,10 @@ class OllamaClient:
     def set_operation_mode(self, mode_name: str):
         if mode_name in self.OPERATION_MODES:
             self.operation_mode = mode_name
+
+    def register_security_handler(self, handler):
+        """Allows mobile/desktop to register an authorization handler."""
+        ToolRegistry.set_security_callback(handler)
 
     def get_default_model(self) -> str:
         env_model = os.environ.get("AURA_DEFAULT_MODEL", "").strip()

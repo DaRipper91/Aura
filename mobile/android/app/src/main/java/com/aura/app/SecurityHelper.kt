@@ -1,35 +1,59 @@
 package com.aura.app
 
-import java.io.File
-import java.io.FileInputStream
-import java.security.MessageDigest
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import java.security.KeyPairGenerator
+import java.security.KeyStore
+import java.security.Signature
+import java.util.Base64
 
-object SecurityHelper {
-    /**
-     * Calculates the SHA-256 hash of a file.
-     */
-    fun calculateSHA256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val buffer = ByteArray(8192)
-        FileInputStream(file).use { input ->
-            var read: Int
-            while (input.read(buffer).also { read = it } != -1) {
-                digest.update(buffer, 0, read)
-            }
-        }
-        val hashBytes = digest.digest()
-        return hashBytes.joinToString("") { "%02x".format(it) }
+/**
+ * 🛡️ SENTINEL MANDATE: Cryptographic Security Helper.
+ * Manages hardware-backed keys in the Android Keystore for tool authorization.
+ */
+class SecurityHelper {
+    private val KEY_ALIAS = "aura_auth_key"
+    private val KEYSTORE_NAME = "AndroidKeyStore"
+
+    init {
+        ensureKeyExists()
     }
 
-    /**
-     * Verifies if the file's SHA-256 matches the expected hash.
-     */
-    fun verifyIntegrity(file: File, expectedHash: String): Boolean {
-        return try {
-            val actualHash = calculateSHA256(file)
-            actualHash.equals(expectedHash, ignoreCase = true)
-        } catch (e: Exception) {
-            false
+    private fun ensureKeyExists() {
+        val keyStore = KeyStore.getInstance(KEYSTORE_NAME).apply { load(null) }
+        if (!keyStore.containsAlias(KEY_ALIAS)) {
+            val kpg = KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_NAME
+            )
+            val parameterSpec = KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+            ).run {
+                setDigests(KeyProperties.DIGEST_SHA256)
+                setUserAuthenticationRequired(true) // 🔒 REQUIRES BIOMETRICS
+                setUserAuthenticationValidityDurationSeconds(-1) // Always require prompt
+                build()
+            }
+            kpg.initialize(parameterSpec)
+            kpg.generateKeyPair()
         }
+    }
+
+    fun getPublicKey(): String {
+        val keyStore = KeyStore.getInstance(KEYSTORE_NAME).apply { load(null) }
+        val certificate = keyStore.getCertificate(KEY_ALIAS)
+        return Base64.getEncoder().encodeToString(certificate.publicKey.encoded)
+    }
+
+    fun signChallenge(challenge: String): String {
+        val keyStore = KeyStore.getInstance(KEYSTORE_NAME).apply { load(null) }
+        val privateKey = keyStore.getKey(KEY_ALIAS, null) as java.security.PrivateKey
+        
+        val signature = Signature.getInstance("SHA256withECDSA").apply {
+            initSign(privateKey)
+            update(challenge.toByteArray())
+        }
+        
+        return Base64.getEncoder().encodeToString(signature.sign())
     }
 }

@@ -17,5 +17,11 @@
 - [x] **Da-Pine: Cellular Telemetry Bridge:** ModemManager integration to pipe SMS/2FA via `check_cellular` tool.
 - [x] **Aura Desktop: Local Audio Pipeline:** `spd-say` integration for local, low-latency voice interaction via `voice_synthesis` tool.
 
+## PHASE 5: MOBILE SATELLITE ASCENSION (The Physical Key)
+- [ ] **Aura APK: Biometric Tool Gating:** `BiometricPrompt` integration to authorize risky Hub commands via fingerprint.
+- [ ] **Aura APK: UI Parity (Glitch HUD):** Port the Reactive Glitch Aesthetic and Ghost Log to the Compose UI.
+- [ ] **Aura APK: Seamless Edge Handover:** Local Phi-3 fallback mechanism for high-latency cellular scenarios.
+- [ ] **Aura APK: System Telemetry Bridge:** Pixel 10 Pro sensor data (GPS/Accel) available as tools for the Hub Agent.
+
 ---
-**STATUS: SYSTEM_READY // ALL PHASES DEPLOYED**
+**STATUS: PHASE 5_INITIATED // EXPANDING TRUST LINK**
