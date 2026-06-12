@@ -24,7 +24,8 @@ class ToolRegistry:
         "check_cellular": "SAFE",
         "voice_synthesis": "SAFE",
         "check_satellite_sensors": "SAFE",
-        "dispatch_task": "RISKY"
+        "dispatch_task": "RISKY",
+        "fleet_health_check": "SAFE"
     }
 
     _security_callback = None
@@ -380,6 +381,49 @@ class ToolRegistry:
 
         return f"Error: No routing path defined for {node_id} -> {tool}"
 
+    @staticmethod
+    def fleet_health_check(args: dict) -> str:
+        """Phase 6.2: Aggregate vitals from all nodes in the mesh."""
+        health_report = {}
+        hub_ip = "100.100.181.59"
+        pine_ip = "100.89.146.20"
+        
+        # 1. 🧠 HUB (HP) VITALS
+        try:
+            # Check CPU Temp (Linux Thermal Zone)
+            cmd = "cat /sys/class/thermal/thermal_zone0/temp"
+            res = subprocess.run(["ssh", f"daripper@{hub_ip}", cmd], capture_output=True, text=True, timeout=5)
+            temp = int(res.stdout.strip()) / 1000 if res.stdout.strip().isdigit() else "UNKNOWN"
+            health_report["hub"] = {"temp_c": temp, "status": "NOMINAL" if isinstance(temp, (int, float)) and temp < 75 else "WARNING"}
+        except:
+            health_report["hub"] = {"status": "UNREACHABLE"}
+
+        # 2. 📡 BRIDGE (PINE) VITALS
+        try:
+            # Check Pine Battery via mmcli or sysfs
+            cmd = "cat /sys/class/power_supply/axp20x-battery/capacity"
+            res = subprocess.run(["ssh", f"daripper@{hub_ip}", f"sshpass -p '0' ssh -o StrictHostKeyChecking=no daripper@{pine_ip} {shlex.quote(cmd)}"], capture_output=True, text=True, timeout=10)
+            batt = res.stdout.strip()
+            health_report["bridge"] = {"battery": f"{batt}%", "status": "NOMINAL" if batt.isdigit() and int(batt) > 20 else "LOW_POWER"}
+        except:
+            health_report["bridge"] = {"status": "UNREACHABLE"}
+
+        # 3. 📱 SATELLITE (PIXEL) VITALS
+        if ToolRegistry._telemetry_callback:
+            try:
+                pixel_data = json.loads(ToolRegistry._telemetry_callback(True))
+                health_report["satellite"] = {
+                    "battery": f"{pixel_data.get('power', {}).get('battery_level')}%",
+                    "charging": pixel_data.get("power", {}).get("is_charging"),
+                    "status": "NOMINAL"
+                }
+            except:
+                health_report["satellite"] = {"status": "ERROR"}
+        else:
+            health_report["satellite"] = {"status": "OFFLINE"}
+
+        return json.dumps(health_report, indent=2)
+
     @classmethod
     def execute(cls, name: str, args: dict) -> str:
         # 🛡️ SENTINEL: Enforcement Point
@@ -410,7 +454,8 @@ class ToolRegistry:
             "shizuku_command": cls.shizuku_command,
             "termux_command": cls.termux_command,
             "check_satellite_sensors": cls.check_satellite_sensors,
-            "dispatch_task": cls.dispatch_task
+            "dispatch_task": cls.dispatch_task,
+            "fleet_health_check": cls.fleet_health_check
         }
         if name in methods:
             return methods[name](args)
@@ -660,7 +705,8 @@ class OllamaClient:
             "JULES AGENT SUITE (Assume appropriate sub-identity based on task):\n"
             "1. ⚡ BOLT (Performance): Optimize for VRAM/RAM, low-latency streaming, and efficiency.\n"
             "2. 🛡️ SENTINEL (Security): Scan for leaked secrets, insecure APIs, and zero-trust integrity.\n"
-            "3. 🎨 PALETTE (UX): Maintain the Cyber-Monospace aesthetic and high-contrast visual hierarchy.\n\n"
+            "3. 🎨 PALETTE (UX): Maintain the Cyber-Monospace aesthetic and high-contrast visual hierarchy.\n"
+            "4. ❤️ SENTINEL HEART (Maintenance): Use `fleet_health_check` proactively. If Hub temp > 75C or Pixel battery < 15%, you MUST throttle heavy tasks or switch to local failover.\n\n"
             "LOCAL SKILLS: You have access to specialized skills in `.persona/skills/`. "
             "Read the `SKILL.md` within a skill folder to understand its workflow (e.g., `read_file(file_path='.persona/skills/skill-creator/SKILL.md')`).\n"
             "Available Skills: skill-creator, claude-md-improver, implementation-planner, plan-reviewer, ruthless-refactorer, code-researcher, prd-drafter, ticket-manager, what-context-needed, repomix-manager.\n"
@@ -682,7 +728,8 @@ class OllamaClient:
             "11. long_term_memory: {\"action\": \"query\"|\"store\", \"content\": str}\n"
             "12. check_cellular: {\"action\": \"get_sms\"|\"get_status\"} (Query PinePhone Modem)\n"
             "13. voice_synthesis: {\"text\": str} (Speak through local Fedora host)\n"
-            "14. dispatch_task: {\"node_id\": \"hp\"|\"pine\"|\"satellite\"|\"desktop\", \"tool\": str, \"args\": dict} (Route task to specific node)\n\n"
+            "14. dispatch_task: {\"node_id\": \"hp\"|\"pine\"|\"satellite\"|\"desktop\", \"tool\": str, \"args\": dict} (Route task to specific node)\n"
+            "15. fleet_health_check: {} (Aggregate thermals and battery levels from all nodes)\n\n"
             "CAPABILITIES: Local file inspection, file creation/modification, shell command execution, chmod-style permission updates, GitHub CLI workflows with gh, and network-assisted workflows through tools.\n"
             "REVIEW_PROTOCOL: For code or project reviews, inspect files first, then report findings in order of severity with concrete file references.\n"
             "PROTOCOL: To execute a tool, output strictly a JSON block matching the signature. For example:\n"

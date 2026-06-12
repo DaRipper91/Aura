@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+import json
 
 # Add python/ to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
@@ -40,6 +41,19 @@ class TestSensoryBridge(unittest.TestCase):
         })
         
         self.assertEqual(result, mock_data)
+
+    def test_fleet_health_check(self):
+        """Verify that fleet_health_check aggregates mock vitals."""
+        # Mock satellite callback
+        ToolRegistry.set_telemetry_callback(lambda f: '{"power": {"battery_level": 50, "is_charging": true}}')
+        
+        # We can't easily mock the subprocess SSH calls without complex mocking, 
+        # so we just verify it runs and returns a JSON string with the 'satellite' key.
+        result = ToolRegistry.fleet_health_check({})
+        data = json.loads(result)
+        
+        self.assertIn("satellite", data)
+        self.assertEqual(data["satellite"]["battery"], "50%")
 
 if __name__ == '__main__':
     unittest.main()
