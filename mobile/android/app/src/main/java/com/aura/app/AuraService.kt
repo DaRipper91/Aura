@@ -4,29 +4,92 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import kotlin.concurrent.thread
 
 class AuraService : Service() {
     private val CHANNEL_ID = "AuraEngineChannel"
+    private var isListening = false
+    private lateinit var whisperEngine: WhisperEngine
+    
+    // ⚡ BOLT: 5-second circular buffer (16kHz, Mono)
+    private val SAMPLE_RATE = 16000
+    private val BUFFER_SIZE_SECONDS = 5
+    private val audioBuffer = FloatArray(SAMPLE_RATE * BUFFER_SIZE_SECONDS)
+    private var bufferIndex = 0
+
+    override fun onCreate() {
+        super.onCreate()
+        whisperEngine = WhisperEngine(this)
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createNotificationChannel()
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Aura Engine Active")
-            .setContentText("Aura is processing reasoning tasks in the background.")
+            .setContentTitle("Aura // Hands-Free Active")
+            .setContentText("Listening for 'Wake Aura'...")
             .setSmallIcon(R.drawable.ic_aura_logo)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
         } else {
             startForeground(1, notification)
         }
         
+        startAudioLoop()
         return START_STICKY
+    }
+
+    private fun startAudioLoop() {
+        if (isListening) return
+        isListening = true
+        
+        thread {
+            val minBufferSize = AudioRecord.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT
+            )
+            
+            val audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+                minBufferSize
+            )
+
+            audioRecord.startRecording()
+            val tempBuffer = FloatArray(minBufferSize)
+
+            while (isListening) {
+                val read = audioRecord.read(tempBuffer, 0, minBufferSize, AudioRecord.READ_BLOCKING)
+                if (read > 0) {
+                    // Update circular buffer
+                    for (i in 0 until read) {
+                        audioBuffer[bufferIndex] = tempBuffer[i]
+                        bufferIndex = (bufferIndex + 1) % audioBuffer.size
+                    }
+                    
+                    // 🧠 Simple VAD / Wake Word Logic (Placeholder)
+                    // TODO: Integrate MediaPipe Audio Task for Wake Aura
+                }
+            }
+            audioRecord.stop()
+            audioRecord.release()
+        }
+    }
+
+    override fun onDestroy() {
+        isListening = false
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

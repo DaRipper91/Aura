@@ -35,6 +35,8 @@ jobs:
           mkdir -p mobile/android/app/src/main/assets/models
           # PHI3_MINI remains as the lightweight on-device fallback
           curl -L "https://huggingface.co/google/phi-3-mini-4k-instruct-tflite/resolve/main/phi-3-mini-4k-instruct.bin" -o "mobile/android/app/src/main/assets/models/PHI3_MINI.bin"
+          # Whisper Tiny for local STT
+          curl -L "https://huggingface.co/litert-community/whisper-tiny-en-tflite/resolve/main/whisper-tiny-en.tflite" -o "mobile/android/app/src/main/assets/models/whisper_tiny_en.tflite"
 
       - name: Build Debug APK with Chaquopy
         run: chmod +x gradlew && ./gradlew assembleDebug
