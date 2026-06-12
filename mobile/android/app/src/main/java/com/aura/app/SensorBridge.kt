@@ -32,7 +32,7 @@ class SensorBridge(private val context: Context) {
         
         val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val batteryPct = if (scale > 0) (level * 100 / scale.toFloat()) else -1f
+        val batteryPct = if (scale > 0) (level.toFloat() / scale.toFloat() * 100f) else -1f
         
         val powerInfo = JSONObject()
         powerInfo.put("battery_level", batteryPct.toInt())
@@ -72,6 +72,7 @@ class SensorBridge(private val context: Context) {
             val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 telephonyManager.dataNetworkType
             } else {
+                @Suppress("DEPRECATION")
                 telephonyManager.networkType
             }
             signalInfo.put("network_type", getNetworkType(type))
@@ -87,7 +88,8 @@ class SensorBridge(private val context: Context) {
         return when (type) {
             TelephonyManager.NETWORK_TYPE_NR -> "5G"
             TelephonyManager.NETWORK_TYPE_LTE -> "4G/LTE"
-            TelephonyManager.NETWORK_TYPE_WIFI -> "Wi-Fi" // Not standard for Telephony but useful
+            TelephonyManager.NETWORK_TYPE_GPRS, TelephonyManager.NETWORK_TYPE_EDGE -> "2G"
+            TelephonyManager.NETWORK_TYPE_UMTS, TelephonyManager.NETWORK_TYPE_HSDPA -> "3G"
             else -> "CELLULAR_DATA"
         }
     }
