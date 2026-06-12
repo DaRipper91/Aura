@@ -123,7 +123,9 @@ fun ChatScreen(
 ) {
     var inputText by remember { mutableStateOf(initialPrompt ?: "") }
     var messages by remember { mutableStateOf(listOf<String>()) }
+    var ghostLog by remember { mutableStateOf(listOf("SYSTEM_AWAKENED", "HUB_SCANNING...")) }
     var showSettings by remember { mutableStateOf(false) }
+    var isLocalMode by remember { mutableStateOf(false) }
     
     // Feature Toggles
     var hapticsEnabled by remember { mutableStateOf(true) }
@@ -133,6 +135,15 @@ fun ChatScreen(
     val context = LocalContext.current
     val hapticHelper = remember { HapticHelper(context) }
 
+    // Listen for Engine Handover
+    LaunchedEffect(Unit) {
+        bridge.setOnEngineSwitchListener { local ->
+            isLocalMode = it
+            ghostLog = ghostLog + "ENGINE_SWITCH: ${if (it) "LOCAL_EDGE" else "REMOTE_HUB"}"
+            if (hapticsEnabled) hapticHelper.stateAwakening()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -141,23 +152,55 @@ fun ChatScreen(
             .navigationBarsPadding() 
             .imePadding() 
     ) {
-        // 🌌 HEADER: Simple Branding
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
-            Text("AURA // LOGIC HUB", color = Color(0xFFD4AF37), style = MaterialTheme.typography.labelSmall)
-            
-            Text(
-                text = "SETTINGS",
-                color = if (showSettings) Color(0xFFD4AF37) else Color.Gray,
-                modifier = Modifier.clickable {
-                    if (hapticsEnabled) hapticHelper.sessionDisconnect()
-                    showSettings = !showSettings
-                }.padding(horizontal = 8.dp),
-                style = MaterialTheme.typography.labelSmall
-            )
+        // 🌌 HEADER: Hub Status & Telemetry
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(if (isLocalMode) Color.Red else Color(0xFF00FFCC), shape = androidx.compose.foundation.shape.CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isLocalMode) "LOCAL // EDGE_MODE" else "HUB // REMOTE_ACTIVE", 
+                        color = if (isLocalMode) Color.Red else Color(0xFF00FFCC), 
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                
+                Text(
+                    text = "SETTINGS",
+                    color = if (showSettings) Color(0xFFD4AF37) else Color.Gray,
+                    modifier = Modifier.clickable {
+                        if (hapticsEnabled) hapticHelper.sessionDisconnect()
+                        showSettings = !showSettings
+                    }.padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            // 👻 GHOST LOG: System Telemetry
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .padding(top = 8.dp),
+                reverseLayout = true
+            ) {
+                items(ghostLog.reversed()) { log ->
+                    Text(
+                        text = "> $log",
+                        color = Color(0xFFD4AF37).copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                }
+            }
         }
 
         if (showSettings) {
@@ -211,14 +254,19 @@ fun ChatScreen(
                         if (hapticsEnabled) hapticHelper.stateAwakening()
                         messages = messages + "USER: $prompt"
                         messages = messages + "AURA: ..." 
+                        ghostLog = ghostLog + "PROMPT_DISPATCHED"
                         inputText = ""
 
                         val serviceIntent = Intent(context, AuraService::class.java)
                         context.startForegroundService(serviceIntent)
                         
                         bridge.sendPrompt(prompt) { currentStream ->
-                            if (hapticsEnabled) hapticHelper.tokenThrum()
-                            messages = messages.dropLast(1) + "AURA: $currentStream"
+                            if (currentStream.startsWith("SYSTEM:")) {
+                                ghostLog = ghostLog + currentStream.substringAfter("SYSTEM:").trim()
+                            } else {
+                                if (hapticsEnabled) hapticHelper.tokenThrum()
+                                messages = messages.dropLast(1) + "AURA: $currentStream"
+                            }
                         }
                     }
                 },

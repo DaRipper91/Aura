@@ -154,8 +154,21 @@ class AuraBridge(private val context: android.content.Context) {
         return bytes
     }
 
+    private var onEngineSwitch: ((Boolean) -> Unit)? = null
+    private val modelManager = ModelManager(context)
+
+    init {
+        localEngine = LocalInferenceEngine(context)
+        // ... rest of init remains same or will be updated ...
+    }
+
+    fun setOnEngineSwitchListener(listener: (Boolean) -> Unit) {
+        onEngineSwitch = listener
+    }
+
     /**
      * Pipes the prompt to the active engine (Python/Remote or Standalone/Local).
+     * Includes automatic failover to local engine on network failure.
      */
     fun sendPrompt(prompt: String, model: String = "qwen2.5:7b", callback: (String) -> Unit) {
         if (useLocalInference) {
@@ -172,17 +185,48 @@ class AuraBridge(private val context: android.content.Context) {
                 val iterator = generator?.callAttr("__iter__")
                 
                 var fullResponse = ""
+                var receivedChunks = false
                 while (true) {
                     val chunk = iterator?.callAttr("__next__")?.toString() ?: break
                     fullResponse += chunk
+                    receivedChunks = true
                     
-                    // Push state update to the UI thread for safe Compose updates and Haptics
+                    // Push state update to the UI thread
                     mainHandler.post {
                         callback(fullResponse) 
                     }
                 }
             } catch (e: Exception) {
-                // Python StopIteration ends the loop; catch it silently
+                // If we failed to get even one chunk, trigger failover
+                android.util.Log.e("AuraBridge", "Remote Inference Failed: ${e.message}")
+                
+                mainHandler.post {
+                    // Try to initialize local engine if not ready
+                    val localModelName = "PHI3_MINI"
+                    if (modelManager.isModelInAssets(localModelName)) {
+                        callback("SYSTEM: HUB_OFFLINE // INITIATING_EDGE_HANDOVER...")
+                        
+                        modelManager.extractModelFromAssets(localModelName) { success, _ ->
+                            if (success) {
+                                val modelFile = modelManager.getModelFile(localModelName)
+                                setLocalMode(true, modelFile.absolutePath, { result, _ ->
+                                    callback(result)
+                                }) { ready ->
+                                    if (ready) {
+                                        onEngineSwitch?.invoke(true)
+                                        sendPrompt(prompt, model, callback)
+                                    } else {
+                                        callback("SYSTEM: FAILOVER_ERROR // LOCAL_ENGINE_FAULT")
+                                    }
+                                }
+                            } else {
+                                callback("SYSTEM: FAILOVER_ERROR // ASSET_EXTRACTION_FAILED")
+                            }
+                        }
+                    } else {
+                        callback("SYSTEM: HUB_OFFLINE // NO_LOCAL_BACKUP_FOUND")
+                    }
+                }
             }
         }.start()
     }
