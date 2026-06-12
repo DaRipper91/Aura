@@ -6,7 +6,7 @@ import android.content.IntentFilter
 import android.location.Location
 import android.location.LocationManager
 import android.os.BatteryManager
-import android.telephony.CellSignalStrength
+import android.os.Build
 import android.telephony.TelephonyManager
 import org.json.JSONObject
 import java.time.Instant
@@ -23,12 +23,16 @@ class SensorBridge(private val context: Context) {
         telemetry.put("timestamp", Instant.now().toString())
 
         // 🔋 POWER STATUS
-        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { filter ->
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        val batteryStatus: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(null, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
             context.registerReceiver(null, filter)
         }
+        
         val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val batteryPct = level * 100 / scale.toFloat()
+        val batteryPct = if (scale > 0) (level * 100 / scale.toFloat()) else -1f
         
         val powerInfo = JSONObject()
         powerInfo.put("battery_level", batteryPct.toInt())
@@ -62,10 +66,19 @@ class SensorBridge(private val context: Context) {
         }
 
         // 📶 NETWORK SIGNAL
-        val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val signalInfo = JSONObject()
-        signalInfo.put("network_type", getNetworkType(telephonyManager.networkType))
-        telemetry.put("network", signalInfo)
+        try {
+            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val signalInfo = JSONObject()
+            val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                telephonyManager.dataNetworkType
+            } else {
+                telephonyManager.networkType
+            }
+            signalInfo.put("network_type", getNetworkType(type))
+            telemetry.put("network", signalInfo)
+        } catch (e: Exception) {
+            telemetry.put("network", "UNKNOWN")
+        }
 
         return telemetry.toString()
     }
@@ -74,7 +87,8 @@ class SensorBridge(private val context: Context) {
         return when (type) {
             TelephonyManager.NETWORK_TYPE_NR -> "5G"
             TelephonyManager.NETWORK_TYPE_LTE -> "4G/LTE"
-            else -> "UNKNOWN"
+            TelephonyManager.NETWORK_TYPE_WIFI -> "Wi-Fi" // Not standard for Telephony but useful
+            else -> "CELLULAR_DATA"
         }
     }
 }
