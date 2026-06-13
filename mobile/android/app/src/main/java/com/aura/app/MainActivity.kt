@@ -349,6 +349,7 @@ fun SettingsPanel(
 ) {
     var urlText by remember { mutableStateOf(bridge.getOrchestratorUrl()) }
     var connectionStatus by remember { mutableStateOf("IDLE") } // IDLE, TESTING, OK, FAIL
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
