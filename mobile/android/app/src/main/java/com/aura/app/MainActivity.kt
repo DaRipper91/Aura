@@ -386,7 +386,13 @@ fun SettingsPanel(
                     onClick = {
                         connectionStatus = "TESTING"
                         bridge.testConnection(urlText) { success ->
-                            connectionStatus = if (success) "OK" else "FAIL"
+                            if (success) {
+                                android.widget.Toast.makeText(context, "HUB CONNECTED: OK", android.widget.Toast.LENGTH_SHORT).show()
+                                connectionStatus = "OK"
+                            } else {
+                                android.widget.Toast.makeText(context, "HUB ERROR: UNREACHABLE", android.widget.Toast.LENGTH_SHORT).show()
+                                connectionStatus = "FAIL"
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(

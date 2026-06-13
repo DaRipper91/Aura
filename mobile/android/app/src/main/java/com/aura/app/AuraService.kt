@@ -49,47 +49,70 @@ class AuraService : Service() {
 
     private fun startAudioLoop() {
         if (isListening) return
+        
+        // 🛡️ SANITY CHECK: Ensure we have recording permission
+        if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) 
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            android.util.Log.e("AuraAudio", "Permission DENIED: RECORD_AUDIO. Aborting loop.")
+            return
+        }
+
         isListening = true
         
         thread {
-            val minBufferSize = AudioRecord.getMinBufferSize(
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_FLOAT
-            )
-            
-            val audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_FLOAT,
-                minBufferSize
-            )
+            try {
+                val minBufferSize = AudioRecord.getMinBufferSize(
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+                )
+                
+                if (minBufferSize == AudioRecord.ERROR_BAD_VALUE) {
+                    android.util.Log.e("AuraAudio", "Invalid buffer size. Aborting.")
+                    isListening = false
+                    return@thread
+                }
 
-            audioRecord.startRecording()
-            val tempBuffer = FloatArray(minBufferSize)
+                val audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    minBufferSize
+                )
 
-            while (isListening) {
-                val read = audioRecord.read(tempBuffer, 0, minBufferSize, AudioRecord.READ_BLOCKING)
-                if (read > 0) {
-                    // Update circular buffer
-                    for (i in 0 until read) {
-                        audioBuffer[bufferIndex] = tempBuffer[i]
-                        bufferIndex = (bufferIndex + 1) % audioBuffer.size
-                    }
-                    
-                    // 🧠 Phase 6.3.2: Simple Energy VAD (Voice Activity Detection)
-                    val energy = tempBuffer.map { it * it }.average()
-                    if (energy > 0.01) { // Threshold for "Speech"
-                        android.util.Log.d("AuraAudio", "Speech activity detected (Energy: $energy)")
-                        // Trigger transcription on the last 5 seconds
-                        val transcription = whisperEngine.transcribe(audioBuffer)
-                        // TODO: Broadcast result to UI
+                if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+                    android.util.Log.e("AuraAudio", "AudioRecord initialization failed.")
+                    isListening = false
+                    return@thread
+                }
+
+                audioRecord.startRecording()
+                val tempBuffer = ShortArray(minBufferSize)
+
+                while (isListening) {
+                    val read = audioRecord.read(tempBuffer, 0, minBufferSize)
+                    if (read > 0) {
+                        // Update circular buffer (convert to float for engine)
+                        for (i in 0 until read) {
+                            audioBuffer[bufferIndex] = tempBuffer[i].toFloat() / 32768.0f
+                            bufferIndex = (bufferIndex + 1) % audioBuffer.size
+                        }
+                        
+                        // 🧠 Phase 6.3.2: Simple Energy VAD
+                        val energy = tempBuffer.map { it.toInt() * it.toInt() }.average()
+                        if (energy > 5000) { // Threshold for 16-bit PCM
+                            android.util.Log.d("AuraAudio", "Speech activity detected")
+                            whisperEngine.transcribe(audioBuffer)
+                        }
                     }
                 }
+                audioRecord.stop()
+                audioRecord.release()
+            } catch (e: Exception) {
+                android.util.Log.e("AuraAudio", "Audio Loop Crash: ${e.message}")
+                isListening = false
             }
-            audioRecord.stop()
-            audioRecord.release()
         }
     }
 
