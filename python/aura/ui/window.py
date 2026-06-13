@@ -658,6 +658,11 @@ class AuraWindow(QMainWindow):
                 border: 1px dashed rgba(102, 51, 255, 0.2);
                 background-color: rgba(128, 0, 128, 0.05);
             }}
+            QPushButton:checked {{
+                background-color: rgba(0, 230, 230, 0.2);
+                color: #ffffff;
+                border: 1px solid #00e6e6;
+            }}
             QLineEdit, QComboBox {{
                 background-color: rgba(13, 13, 26, 0.7);
                 color: #E0E0E0;
