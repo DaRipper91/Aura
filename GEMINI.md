@@ -15,12 +15,17 @@ To provide a focused, high-performance, and autonomous "Living Hub" for local AI
 - **Models:** Optimized for local execution with remote offloading to high-performance logic hubs.
 
 ## 🎯 Target Devices (Optimized)
-- **Android:** Pixel 10 Pro, Galaxy S25 (MediaPipe Engine).
-- **Windows:** Windows 11 Lite (Single-file .exe).
-- **Xbox:** Series X/S & One S (UWP / Controller-First).
-- **Linux:** CachyOS x86_64 (Native Python/Zig + Ollama).
+- **Android:** Pixel 10 Pro (Phase 5: Biometric Key).
+- **Windows:** Windows 11 Lite (Aura-EXE).
+- **Xbox:** Series X/S (Controller-First).
+- **Linux:** Fedora Asahi / CachyOS (Ollama Hub).
 
 ---
+
+## 🏗️ SYSTEM STATUS: PHASE 6 // THE AUTONOMOUS MESH
+- **Hub:** Da-HP (Online).
+- **Satellite:** Pixel 10 Pro (Biometric Gating Active).
+- **Bridge:** Da-Pine (Cellular Telemetry Active).
 
 ---
 
@@ -45,10 +50,9 @@ To provide a focused, high-performance, and autonomous "Living Hub" for local AI
 - **Role:** System & Logistics Engineer.
 - **Mandate:** Maintain the Da-HP Logic Hub. Orchestrate the `da-hp-bootstrap.sh` lifecycle, manage hardware-specific tuning (Arch Zen, Huge Pages), and monitor health across the Tailnet. Ensure the "Living Hub" is robust and re-provisionable.
 - **Branch Prefix:** `forge/`
+
 ## 📱 MOBILE SATELLITE (Aura-APK)
-- **Role:** The **Spoke** interface for Android.
+- **Role:** The **Physical Key** for the Ecosystem.
 - **Location:** `./mobile/`
-- **Mandate Compliance:** Must strictly follow **BOLT**, **SENTINEL**, and **PALETTE** within the Android ecosystem.
-- **Integration:** Utilizes the Hub logic in `python/aura_core/` via a secure Tailscale link.
-- **Security:** Mandatory biometric gating for all remote tool executions initiated from the satellite.
-EOT
+- **Mandate:** Secure the Hub. Gate all `RISKY` tools behind on-device biometric challenge-response.
+- **Failover:** Always maintain Phi-3 fallback for edge handover.

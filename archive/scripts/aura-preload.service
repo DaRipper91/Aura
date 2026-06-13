@@ -1,0 +1,13 @@
+[Unit]
+Description=Aura Model Pre-Loader
+After=ollama.service
+Requires=ollama.service
+
+[Service]
+Type=oneshot
+User=daripper
+ExecStart=/usr/local/bin/aura-preload.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

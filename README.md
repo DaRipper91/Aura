@@ -30,6 +30,9 @@ A PySide6 Python application providing a "Living Terminal" feel. It natively par
 ### 📡 THE BRIDGE (`Da-Pine`)
 A repurposed PinePhone running **postmarketOS Sxmo**. It acts as a stable Tailscale subnet router, providing hardware resilience, cellular bridging, and Wake-on-LAN resurrection capabilities for the Hub.
 
+### 📱 THE SATELLITE (`Aura APK`)
+A Jetpack Compose Android application for the Pixel 10 Pro. It serves as the fleet's **Physical Key**, providing biometric authorization for risky Hub commands and real-time sensory data back to the Agent.
+
 ---
 
 ## 🤖 THE AGENT SUITE
@@ -45,7 +48,10 @@ Aura embodies four distinct sub-identities to maintain systemic integrity:
 
 ## ✨ KEY CAPABILITIES
 
-*   **Autonomous Execution Loop:** Native parsing of JSON and Qwen tool tokens. When Aura decides it needs to run `pwd` or `cat main.py`, it does so automatically, seamlessly injecting the results back into its context window.
+*   **Autonomous Execution Loop:** Native parsing of JSON and Qwen tool tokens. When Aura decides it needs to run `pwd` or `cat main.py`, it does so automatically.
+*   **🛡️ Biometric Gating (Phase 5):** High-risk commands on the Hub require a fingerprint tap on your phone. Aura uses hardware-backed EC keys in the Android Keystore to sign tool challenges.
+*   **🛰️ Sensory Integration:** The Hub Agent can query the Pixel's sensors (Battery, 5G Signal, GPS) to make environmentally aware decisions.
+*   **🔄 Edge Handover:** Automatic failover to on-device Phi-3 inference if the Hub or Tailnet link becomes unstable.
 *   **UI Cloaking:** Raw tool syntax and scratchpad reasoning are parsed out of the user interface for a clean "Daily Driver" experience (toggleable via the `DEBUG` mode).
 *   **Ghost Logging:** Real-time, non-blocking telemetry, API stream data, and tool execution states rendered alongside the main chat.
 *   **Tailscale Native:** Built from the ground up to treat remote logic hubs as `localhost`, enabling massive model inference on low-power devices.
@@ -53,6 +59,11 @@ Aura embodies four distinct sub-identities to maintain systemic integrity:
 ---
 
 ## 🚀 GETTING STARTED
+
+### 📱 Android (Mobile Satellite)
+1.  **Download:** Get `app-pixel-debug.apk` from the [Rolling Release](https://github.com/DaRipper91/Aura/releases/tag/rolling-release).
+2.  **Auth:** On first run, configure the Hub IP in settings.
+3.  **Key:** Grant Biometric permissions to enable the physical authorization loop.
 
 ### 🪟 Windows (Spoke Client)
 1.  **Download:** Grab the latest `Aura_Setup_v1.0.6.exe` from the [Releases](https://github.com/DaRipper91/Aura/releases) tab.
@@ -64,12 +75,11 @@ Aura embodies four distinct sub-identities to maintain systemic integrity:
 
 ## 🗺️ MASTER ROADMAP
 
-The evolution of Aura is formally structured across four phases. See the full [Master Roadmap](docs/AURA_ROADMAP.md) for execution details.
+The evolution of Aura is formally structured across six phases. See the full [Master Roadmap](docs/AURA_ROADMAP.md) for execution details.
 
-1.  **Phase 1: Infrastructure & Reliability** (Always-Hot loading, Battery Preservation)
-2.  **Phase 2: UI/UX & Immersion** (Reactive UI Glitches, Continuous Vision)
-3.  **Phase 3: Deep Capabilities** (Isolated Execution Sandboxes, Persistent RAG)
-4.  **Phase 4: Advanced Hardware Integration** (Cellular Telemetry Bridging, Local Audio Pipelines)
+1.  **Phase 1-4:** (Infrastructure, UI/UX, Brain, Advanced Hardware) // **COMPLETE**
+2.  **Phase 5: Mobile Satellite Ascension** (Biometric Gating, Sensor Bridge) // **COMPLETE**
+3.  **Phase 6: The Autonomous Mesh** (Fleet Orchestration, Proactive Maintenance) // **INITIATED**
 
 <div align="center">
   <br>

@@ -29,8 +29,8 @@ class AuraBridge(private val context: android.content.Context) {
             val engineModule = py.getModule("aura_core.engine")
             pythonEngine = engineModule.callAttr("OllamaClient")
 
-            // 💾 PERSISTENCE: Load saved URL or use default
-            val savedUrl = prefs.getString("orchestrator_url", "http://10.0.0.1:11434")
+            // 💾 PERSISTENCE: Load saved URL or use default (Da-HP Hub)
+            val savedUrl = prefs.getString("orchestrator_url", "http://100.100.181.59:11434")
             pythonEngine?.callAttr("set_base_url", savedUrl)
 
             // 🛡️ SENTINEL: Register Security Handler
@@ -128,7 +128,7 @@ class AuraBridge(private val context: android.content.Context) {
      * Pipes the prompt to the active engine (Python/Remote or Standalone/Local).
      * Includes automatic failover to local engine on network failure.
      */
-    fun sendPrompt(prompt: String, model: String = "qwen2.5:7b", callback: (String) -> Unit) {
+    fun sendPrompt(prompt: String, model: String = "aura-qwen:latest", callback: (String) -> Unit) {
         if (useLocalInference) {
             localEngine?.generateResponse(prompt) { result, _ ->
                 mainHandler.post { callback(result) }
@@ -138,6 +138,10 @@ class AuraBridge(private val context: android.content.Context) {
 
         Thread {
             try {
+                if (pythonEngine == null) {
+                    mainHandler.post { callback("SYSTEM: ENGINE_INIT_FAILED // CHECK_LOGS") }
+                    return@Thread
+                }
                 // Chaquopy translates Python generators to Java Iterators
                 val generator = pythonEngine?.callAttr("stream_chat", model, prompt)
                 val iterator = generator?.callAttr("__iter__")
@@ -190,7 +194,7 @@ class AuraBridge(private val context: android.content.Context) {
     }
 
     fun getOrchestratorUrl(): String {
-        return prefs.getString("orchestrator_url", "http://10.0.0.1:11434") ?: "http://10.0.0.1:11434"
+        return prefs.getString("orchestrator_url", "http://100.100.181.59:11434") ?: "http://100.100.181.59:11434"
     }
 
     fun testConnection(url: String, callback: (Boolean) -> Unit) {

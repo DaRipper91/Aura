@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+name="aura-batt-daemon"
+description="Clamps PinePhone battery charge between 40-60%"
+command="/usr/bin/python3"
+command_args="/usr/local/bin/aura-batt-daemon.py"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    need localmount
+    after bootmisc
+}

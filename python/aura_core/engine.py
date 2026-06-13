@@ -693,6 +693,10 @@ class OllamaClient:
     def set_verbosity(self, value: float):
         self.verbosity = value
 
+    def set_base_url(self, url: str):
+        """Allows dynamic configuration of the Hub endpoint (used by Mobile Bridge)."""
+        self.base_url = url
+
     def set_profile(self, profile_name: str):
         if profile_name in self.PROFILES:
             self.active_profile = profile_name

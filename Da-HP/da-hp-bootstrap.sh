@@ -115,9 +115,13 @@ set -g fish_greeting ""
 alias aura="gemini"
 EOT
 
-# Download Aura Starship Config
-curl -sL https://raw.githubusercontent.com/DaRipper91/Aura/main/configs/starship.toml -o /home/daripper/.config/starship.toml
-chown -R daripper:daripper /home/daripper/.config
+# Copy Aura Starship Config from local repo (assuming script is run from repo root)
+if [ -f "../configs/starship.toml" ]; then
+    cp "../configs/starship.toml" /home/daripper/.config/starship.toml
+    chown daripper:daripper /home/daripper/.config/starship.toml
+else
+    echo "⚠️ starship.toml not found in local repo, skipping copy."
+fi
 
 # 6.7 AUTO-LOGIN (tty1)
 echo "🤖 Enabling Auto-Login..."
@@ -184,22 +188,22 @@ mkdir -p /etc/NetworkManager/system-connections/
 # Logic to pick the best interface: prefer wlan1, fallback to any wl*
 WIFI_IFACE=\$(ls /sys/class/net | grep -E "^wlan1|^wl" | sort -r | head -n 1 || true)
 
-if [ -n "\$WIFI_IFACE" ]; then
-    echo "📡 Configuring WiFi for interface: \$WIFI_IFACE"
+if [ -n "$WIFI_IFACE" ] && [ -n "$WIFI_SSID" ] && [ -n "$WIFI_PSK" ]; then
+    echo "📡 Configuring WiFi for interface: $WIFI_IFACE"
     cat <<EOT > /etc/NetworkManager/system-connections/Aura-WiFi.nmconnection
 [connection]
 id=Aura-WiFi
 type=wifi
-interface-name=\$WIFI_IFACE
+interface-name=$WIFI_IFACE
 autoconnect=true
 
 [wifi]
 mode=infrastructure
-ssid=ADND2.4
+ssid=$WIFI_SSID
 
 [wifi-security]
 key-mgmt=wpa-psk
-psk=SunShine42?!?
+psk=$WIFI_PSK
 
 [ipv4]
 method=auto

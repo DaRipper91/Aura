@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+name="aura-resurrection-daemon"
+description="Monitors Da-HP and sends WOL if unreachable"
+command="/usr/bin/python3"
+command_args="/usr/local/bin/aura-resurrection-daemon.py"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    need localmount
+    after bootmisc
+}
