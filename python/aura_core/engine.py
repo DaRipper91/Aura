@@ -270,11 +270,13 @@ class ToolRegistry:
         try:
             db_cmd = f"sqlite3 ~/aura_memory.db 'CREATE TABLE IF NOT EXISTS memory (id INTEGER PRIMARY KEY, content TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);'"
             if action == "store":
-                safe_content = shlex.quote(content)
-                db_cmd += f" && sqlite3 ~/aura_memory.db \"INSERT INTO memory (content) VALUES ({safe_content});\""
+                content_sql = content.replace("'", "''")
+                sql = f"INSERT INTO memory (content) VALUES ('{content_sql}');"
+                db_cmd += f" && sqlite3 ~/aura_memory.db {shlex.quote(sql)}"
             else:
-                safe_query = shlex.quote(f"%{content}%")
-                db_cmd += f" && sqlite3 ~/aura_memory.db \"SELECT content FROM memory WHERE content LIKE {safe_query} ORDER BY ts DESC LIMIT 5;\""
+                query_sql = f"%{content}%".replace("'", "''")
+                sql = f"SELECT content FROM memory WHERE content LIKE '{query_sql}' ORDER BY ts DESC LIMIT 5;"
+                db_cmd += f" && sqlite3 ~/aura_memory.db {shlex.quote(sql)}"
             
             remote_cmd = ["ssh", f"daripper@{hub_ip}", db_cmd]
             result = subprocess.run(remote_cmd, capture_output=True, text=True, timeout=10)
@@ -500,9 +502,10 @@ class ToolRegistry:
         
         try:
             db_cmd = "sqlite3 ~/aura_telemetry.db 'CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, node TEXT, event TEXT, ts DATETIME DEFAULT CURRENT_TIMESTAMP);'"
-            safe_event = shlex.quote(event)
-            safe_node = shlex.quote(node)
-            db_cmd += f" && sqlite3 ~/aura_telemetry.db \"INSERT INTO events (node, event) VALUES ({safe_node}, {safe_event});\""
+            node_sql = node.replace("'", "''")
+            event_sql = event.replace("'", "''")
+            sql = f"INSERT INTO events (node, event) VALUES ('{node_sql}', '{event_sql}');"
+            db_cmd += f" && sqlite3 ~/aura_telemetry.db {shlex.quote(sql)}"
             
             remote_cmd = ["ssh", f"daripper@{hub_ip}", db_cmd]
             subprocess.run(remote_cmd, capture_output=True, text=True, timeout=10)
