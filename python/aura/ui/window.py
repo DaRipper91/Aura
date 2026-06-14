@@ -653,6 +653,11 @@ class AuraWindow(QMainWindow):
                 outline: none;
                 background-color: rgba(128, 0, 128, 0.2);
             }}
+            QPushButton:checked {{
+                background-color: rgba(0, 230, 230, 0.2);
+                color: #ffffff;
+                border-color: #00e6e6;
+            }}
             QPushButton:disabled {{
                 color: rgba(0, 230, 230, 0.3);
                 border: 1px dashed rgba(102, 51, 255, 0.2);
