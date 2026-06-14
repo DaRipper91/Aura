@@ -13,3 +13,7 @@
 ## 2026-06-12 - Unbounded QTextDocument Memory Leak in High-Frequency Logs
 **Learning:** Appending log lines to a `QTextEdit` (like `GhostLogArea`) without limits inside a high-frequency timer loop (e.g., a 2-second telemetry timer) causes the underlying `QTextDocument` to grow infinitely. This leads to an unbounded memory leak and O(N) layout degradation over long sessions.
 **Action:** Always call `self.document().setMaximumBlockCount(N)` on read-only logging widgets in PySide6 to cap the memory footprint and prevent performance degradation.
+
+## 2026-06-14 - UI Freeze on Startup due to Missing Timeout
+**Learning:** Making synchronous network calls (like `requests.get`) without a timeout during UI initialization (`AuraWindow.__init__`) causes the entire application to hang for up to 60 seconds if the target server (e.g. local Ollama daemon) is down or unreachable.
+**Action:** Always specify an explicit timeout (e.g., `timeout=2`) on synchronous network requests running on the main UI thread, especially during component initialization or event handlers.
