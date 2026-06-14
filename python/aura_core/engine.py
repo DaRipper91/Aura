@@ -863,7 +863,9 @@ class OllamaClient:
 
     def get_available_models(self) -> List[Dict]:
         try:
-            response = requests.get(f"{self.base_url}/api/tags")
+            # ⚡ BOLT OPTIMIZATION: Added timeout=2 to prevent UI thread from freezing for 60s
+            # during startup (AuraWindow.__init__) if the Ollama server is unreachable.
+            response = requests.get(f"{self.base_url}/api/tags", timeout=2)
             if response.status_code == 200:
                 return response.json().get("models", [])
         except:
