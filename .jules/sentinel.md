@@ -7,3 +7,8 @@
 **Vulnerability:** Command injection vulnerability identified in `ToolRegistry.aider_fix`.
 **Learning:** Using `shell=True` along with string interpolation to pass user-controlled data to `subprocess.run` creates an immediate command injection flaw.
 **Prevention:** Pass command arguments as a list to `subprocess.run` and ensure `shell=True` is not used.
+
+## 2024-06-14 - SSH/SQLite Command Injection via Shell Expansion
+**Vulnerability:** Constructing shell commands over SSH that invoke SQL interfaces using `shlex.quote()` inside double-quoted strings enables command injection and SQL injection. Bash evaluates variables (like `$foo`) and subshells (like `` `cmd` ``) inside double quotes despite `shlex.quote()`.
+**Learning:** `shlex.quote()` is meant for escaping single arguments. Placing its output inside double-quoted bash strings nullifies the protection and can lead to remote command execution on the SSH target.
+**Prevention:** Construct the entire SQL query with proper SQL escaping (e.g. `replace("'", "''")`), then apply `shlex.quote()` to the complete query string before passing it to `sqlite3` without additional double quotes.
